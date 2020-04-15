@@ -1,7 +1,13 @@
 # Assembler Program in Python
+# By Kamyar Mirzavaziri
 import sys
 
-print 'Number of arguments:', len(sys.argv), 'arguments.'
-print 'Argument List:', str(sys.argv)
+if len(sys.argv) < 2:
+	raise Exception('No File Specified!');
 
-print("hello world");
+assemblyFile = sys.argv[1]
+
+file = open(assemblyFile, "r")
+
+for line in file:
+	print (line)
