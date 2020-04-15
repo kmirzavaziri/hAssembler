@@ -1,9 +1,9 @@
-PRIME:
-	; if the number is prime the rdx will be 1, else it'll be zero
+PRIME
+	;if the number is prime the rdx will be 1, else it'll be zero
 	mov r8, rax
 	mov rbx, 2
 
-	; iterate all numbers
+	;iterate all numbers
 	main_loop_start:
 	cmp rbx, rax
 	jge main_loop_end
@@ -22,14 +22,14 @@ PRIME:
 	no_case:
 		mov rdx, 0
 		ret
-section .data:
+section .data
 	a dq 37
-section .text:
+section .text
 	global _start
-_start:
+_start
 	mov rax, [a]
 	call PRIME
-exit:
+exit
 	mov ebx, 0
 	mov eax, 1
 	int 80h
