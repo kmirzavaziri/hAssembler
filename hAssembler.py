@@ -5,40 +5,33 @@ from instruction import Instruction
 
 def read():
 	if len(sys.argv) < 2:
-		raise Exception('No File Specified!');
+		raise Exception("No File Specified!")
 	return open(sys.argv[1], 'r')
 
 def write(bits): # TODO
 	OutputFile = open("a.out", "wb")
 	OutputFile.write(bytes)
 
-def semiLex(assemblyFile):
-	instructions = []
+def assemble(assemblyFile):
+	bytes = []
 	for line in assemblyFile:
 		splitedLine = line.split()
 		if len(splitedLine) < 1:
 			continue
 		head = splitedLine[0]
-		if len(head) < 1:
+		if len(head) < 1 or head[0] == '#':
 			continue
-		data = line[len(head):]
-		instructions.append(Instruction(head, data))
-	return instructions
-
-def assemble(instructions):
-	bits = []
-	for instruction in instructions:
+		tail = line[len(head):]
 		try:
-			bits.append(instruction.toMachineCode())
+			bytes += Instruction(head, tail).toMachineCode()
 		except Exception as e:
 			print(e)
-	return bits
+	return bytearray(bytes)
 
 try:
 	assemblyFile = read()
-	instructions = semiLex(assemblyFile)
-	bits = assemble(instructions)
-	print(bits)
+	bytes = assemble(assemblyFile)
+	print(list(map(hex, bytes)))
 except Exception as e:
 	print(e)
 
