@@ -1,10 +1,11 @@
-# This file contains a class called Instruction which stores all datas of
-# a single instruction and can print it in both assembly and machine language
-
-import ast
+# Instruction Class
+# by Kamyar Mirzavaziri
+# Contains a class called Instruction which stores all datas of a single instruction and can print it in both assembly and machine language
 
 from tables import *
+from eval import evaluate
 
+# ------------------------------------------------ HELPER FUNCS ------------------------------------------------
 def operand(op):
 	# Check if memory addressing
 	op = op.strip()
@@ -20,27 +21,97 @@ def operand(op):
 			return {'type': 'reg', 'data': {**registers[op] , 'name': op}}
 		# immediate data
 		try:
-			return {'type': 'imd', 'data': ast.literal_eval(op)}
+			return {'type': 'imd', 'data': evaluate(op)}
 		except:
 			raise Exception("unable to evalute immediate data expression")
+	# memory
+	else:
+		splittedOp = op.split('+')
+		base = {}
+		index = {}
+		scale = 1
+		disp = 0
+		for exp in splittedOp:
+			exp = exp.strip()
+			# this exp is a constant
+			try:
+				disp += evaluate(exp)
+			# this exp is not a constant
+			except:
+				# this exp is a register name
+				if exp in registers:
+					# treating as base
+					if base == {}:
+						base = {**registers[exp] , 'name': exp}
+					# treating as index
+					elif index == {}:
+							index = {**registers[exp] , 'name': exp}
+							scale = 1
+					# both are currently occupied
+					else:
+						raise Exception("invalid base/index expression: too many registers")
+				# this exp is a not a register name (should be index*scale)
+				# Note: here we check if scale is 1, base is free and index is 
+				# occupied, this should be valid if we put this 1-scaled index to base
+				else:
+					# evaluating this expression
+					exp = exp.split('*')
+					tmpScale = 1
+					tmpIndex = {}
+					for innerExp in exp:
+						innerExp = innerExp.strip()
+						# this innerExp is a constant
+						try:
+							tmpScale *= evaluate(innerExp)
+						# this innerExp is not a constant (should be index which shouldn't be occupied)
+						except:
+							if innerExp in registers:
+								if tmpIndex == {}:
+									tmpIndex = {**registers[innerExp] , 'name': innerExp}
+								else:
+									raise Exception("invalid base/index expression: too many registers")
+							# this innerExp can't be anything other than constant or register
+							else:
+								raise Exception("invalid base/index expression: unknown expression '" + innerExp + "'")
+					# if scale is 1 and base is not currently occupied we prefer to put this 1-scaled index to base
+					if tmpScale == 1 and base == {}:
+						base = tmpIndex
+					# else we should put it in index
+					else:
+						if index != {}:
+							raise Exception("'[" + op + "]' is not a valid base/index expression")
+						else:
+							index = tmpIndex					
+							scale = tmpScale
+					# excluding invalid scales
+					if not scale in [1,2,4,8]:
+						raise Exception("'[" + op + "]' is not a valid base/index expression")
+		if base != {} and base['size'] < 32:
+			raise Exception("'[" + op + "]' is not a valid base/index expression")
+		if index != {} and index['size'] < 32: # TODO
+			raise Exception("'[" + op + "]' is not a valid base/index expression")
+			
+		return {'type': 'mem', 'data': {'base': base, 'index': index, 'scale': scale, 'disp': disp}}
 
-	# TODO indirect, scale, indirect with scale, ...	
-
+# ---------------------------------------------- INSTRUCTION CLASS ---------------------------------------------
 class Instruction:
 	# ------------------------- Assembly Code Data -------------------------
+	operator = {}
+	operands = []
 	# ------------------------- Machine Code Data --------------------------
 	# Prefix: 0-4 B
 	prefix = []
 	# Rex: 0-1 B
 	rex = []
 	# OpCode: 1 B = 6 b + 1 b + 1 b
-	# Note: if not [addrMode] then OpCode (1 B) = mainOpCode (4 b) + W (1 b) + reg (3 b)
+	# Note: if not [moveAlter] then OpCode (1 B) = mainOpCode (4 b) + W (1 b) + reg (3 b)
+	moveAlter = False
 	mainOpCode = 0b000000
 	direction = 0b0
 	w = 0b0
 	# AddrMode: 0-1 B ?= 2 b + 3 b + 3 b
 	# (if [addrMode] then we have AddrMode byte, else we don't)
-	addrMode = False
+	addrMode = True
 	mod = 0b00
 	reg = 0b000
 	rm = 0b000
@@ -51,11 +122,16 @@ class Instruction:
 	index = 0b000
 	base = 0b000
 	# Displacement: 0-4 B
-	displacement = []
+	disp = []
 	# Data: 0-8 B
 	data = []
-	# -------------------------------- INIT --------------------------------
-	def __init__ (self, head, tail):
+
+	# --------------------------- TO-STRING FUNC ---------------------------
+	def toString(self):
+		return ' '.join(map("{0:02X}".format, self.machineCode)) + '\t' + self.assemblyCode
+
+	# ------------------------------ ASMTOOBJ ------------------------------
+	def fromAsm(self, head, tail):
 		# ---------------- Primary Proccessing ----------------
 		raw = head + tail
 		
@@ -86,42 +162,44 @@ class Instruction:
 				if self.operands[0]['data']['size'] != self.operands[1]['data']['size']:
 					raise Exception("operand type mismatch for '" + head + "'")
 				# opCode
-				self.mainOpCode = operator['coderr']
-				# addrMode
-				self.addrMode = True
+				self.mainOpCode = self.operator['coder']
 				# direction
 				self.direction = 0b0
 				# op 0
 				self.setRegRm(self.operands[0]['data'])
 				# op 1
-				self.mod = 0b11
 				self.setRegReg(self.operands[1]['data'])
 			# --------------- reg, mem ---------------
-			if self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'mem':
+			elif self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'mem':
 				# opCode
-				self.mainOpCode = self.operator['coderm'] # TODO
-				# addrMode
-				self.addrMode = True # TODO
+				self.mainOpCode = self.operator['coder']
 				# direction
 				self.direction = 0b1
 				# op 0
 				self.setRegReg(self.operands[0]['data'])
 				# op 1
-				# TODO mem
+				self.setMem(self.operands[1]['data'])
 			# --------------- reg, imd ---------------
-			if self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'imd':
+			elif self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'imd':
 				# opCode
-				self.mainOpCode = self.operator['coderi']
-				# addrMode
-				self.addrMode = False
+				# Note: mov operator has alternate encoding
+				if(self.operator['name'] == 'mov'):
+					self.addrMode = False
+					self.moveAlter = True
+					self.mainOpCode = self.operator['codei']
+				else:
+					self.mainOpCode = self.operator['codei'] >> 3
+					self.reg = self.operator['codei'] & 0b111
+				# direction (sign-extended here)
+				self.direction = 0b0
 				# op 0
-				self.setRegReg(self.operands[0]['data'])
+				self.setRegRm(self.operands[0]['data'])
 				# op 1
 				self.setImdData(self.operands[1]['data'], self.operands[0]['data']['size'])
 			# --------------- mem, reg ---------------
-			if self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'reg':
+			elif self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'reg':
 				# opCode
-				self.mainOpCode = self.operator['codemr'] # TODO
+				self.mainOpCode = self.operator['coder'] # TODO
 				# addrMode
 				self.addrMode = True # TODO
 				# direction
@@ -131,12 +209,12 @@ class Instruction:
 				# op 1
 				self.setRegReg(self.operands[1]['data'])
 			# --------------- mem, mem ---------------
-			if self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'mem':
+			elif self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'mem':
 				raise Exception("too many memory references for '" + head + "'")
 			# --------------- mem, imd ---------------
-			if self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'imd':
+			elif self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'imd':
 				# opCode
-				self.mainOpCode = self.operator['codemi'] # TODO
+				self.mainOpCode = self.operator['codei'] # TODO
 				# addrMode
 				self.addrMode = True # TODO
 				# direction
@@ -148,35 +226,77 @@ class Instruction:
 			# --------------- imd, reg ---------------
 			# --------------- imd, mem ---------------
 			# --------------- imd, imd ---------------
-			if self.operands[0]['type'] == 'imd':
+			elif self.operands[0]['type'] == 'imd':
 				raise Exception("operand type mismatch for '" + head + "'")
-	# ------------------------------ INIT-END ------------------------------
+	# ---------------------------- END ASMTOOBJ ----------------------------
 
 	# ---------------------------- HELPER FUNCS ----------------------------
+	def setRegReg(self, register):
+		self.reg = register['code']
+		self.setRegSize(register['size'])
+
+	def setRegRm(self, register):
+		self.mod = 0b11
+		self.rm = register['code']
+		self.setRegSize(register['size'])
+
+	def setRegSize(self, size, isAddress = False):
+		if not isAddress:
+			if size == 8:
+				self.w = 0b0
+			elif size == 16:
+				self.w = 0b1
+				self.prefix = self.prefix + [0x66]
+			elif size == 32:
+				self.w = 0b1
+			# TODO 64-bits
+		else:
+			if size == 32:
+				self.prefix = [0x67] + self.prefix
+			# TODO 64-bits
 	def setImdData(self, val, size):
 		self.data = [0x00] * (size // 8)
 		for i in range(len(self.data)):
 			self.data[i] = val & 0xFF
 			val >>= 8
 
-	def setRegReg(self, register):
-		self.reg = register['code']
-		self.setRegSize(register['size'])
+	def setDisp(self, val, size):
+		self.disp = [0x00] * (size // 8)
+		for i in range(len(self.disp)):
+			self.disp[i] = val & 0xFF
+			val >>= 8
 
-	def setRegRm(self, register):
-		self.rm = register['code']
-		self.setRegSize(register['size'])
+	def setMem(self, val):
+		base = val['base']
+		index = val['index']
+		scale = val['scale']
+		disp = val['disp']
 
-	def setRegSize(self, size):
-		if size == 8:
-			self.w = 0b0
-			self.prefix = []
-		elif size == 16:
-			self.w = 0b1
-			self.prefix = [0x66]
-		elif size == 32:
-			self.w = 0b1
-			self.prefix = []
+		if disp == 0 and base['code'] != 100 and base['code'] != 101:
+			self.mod = 0b00
+		elif disp < 0b1 << 8:
+			self.mod = 0b01
+			self.rm = 0b101
+			self.setDisp(disp, 8)
+		elif disp < 0b1 << 32:
+			self.mod = 0b10
+			self.rm = 0b101
+			self.setDisp(disp, 32)
+		else:
+			raise Exception(hex(disp) + " displacement overflow")
+
+		if val['index'] == {} and val['base'] == {}:
+			#TODO
+			val = val
+		elif val['index'] == {} and val['base'] != {}:
+			self.rm = val['base']['code']
+			self.setRegSize(val['base']['size'], True)
+		elif val['index'] != {} and val['base'] == {}:
+			#TODO
+			val = val
+		elif val['index'] != {} and val['base'] != {}:
+			#TODO
+			val = val
 
 	# ---------------------------- ASSEMBLY CODE ---------------------------
 	@property
@@ -186,43 +306,55 @@ class Instruction:
 			if operand['type'] == 'reg':
 				operands.append(operand['data']['name'])
 			elif operand['type'] == 'mem':
-				operands.append('[TODO]') #TODO
+				base = operand['data']['base']
+				index = operand['data']['index']
+				scale = operand['data']['scale']
+				disp = operand['data']['disp']
+				if disp == 0:
+					dispStr = ''
+				else:
+					dispStr = ' + ' + hex(disp)
+
+				if base == {} and index == {}:
+					operands.append('[' + hex(disp) + ']')
+				elif base == {} and index != {}:
+					operands.append('[' + index['name'] + '*' + scale + dispStr + ']')
+				elif base != {} and index == {}:
+					operands.append('[' + base['name'] + dispStr + ']')
+				elif base != {} and index != {}:
+					operands.append('[' + base['name'] + ' + ' + index['name'] + '*' + hex(scale) + dispStr + ']')
 			elif operand['type'] == 'imd':
 				operands.append(hex(operand['data']))
 		return self.operator['name'] + ' ' + ', '.join(operands)
+		
 	# ---------------------------- MACHINE CODE ----------------------------
 	@property
 	def machineCode(self):
 		sib = []
-		opCode = []		
-		addrMode = []
-		
 		if self.sib:
 			sib = [ (self.scale << 6) | (self.index << 3) | (self.base) ]
 		else:
 			sib = []
 
-		if self.addrMode:
+		opCode = []
+		if self.moveAlter:
+			opCode = [ (self.mainOpCode << 4) | (self.w << 3) | (self.rm) ]
+		else:
 			opCode = [ (self.mainOpCode << 2) | (self.direction << 1) | (self.w) ]
+
+		addrMode = []
+		if self.addrMode:
 			addrMode = [ (self.mod << 6) | (self.reg << 3) | (self.rm) ]
 		else:
-			opCode = [ (self.mainOpCode << 4) | (self.w << 3) | (self.reg) ]
 			addrMode = []
-
+		
 		return \
 			self.prefix + \
 			self.rex + \
 			opCode + \
 			addrMode + \
 			sib + \
-			self.displacement + \
+			self.disp + \
 			self.data
-
-	def toString(self):
-		return ' '.join(map("{0:02X}".format, self.machineCode)) + '\t' + self.assemblyCode
-
-
-
-
-
-
+# -------------------------------------------- END INSTRUCTION CLASS -------------------------------------------
+# EOF

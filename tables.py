@@ -1,6 +1,26 @@
-opCodes = { #TODO
-	"add": {"ops": 2, "coderr": 0b000000},
-	"mov": {"ops": 2, "coderr": 0b100010, "coderi": 0b1011},
+# Tables
+# by Kamyar Mirzavaziri
+# Contains Operator Codes and Register Codes
+
+# ----------------------------------------------- TABLE OF OP-CODES -----------------------------------------------
+# coderr is the OpCode for following situations
+#	op reg, reg
+#	op reg, mem
+#	op mem, reg
+# codei is the OpCode for following situations
+#	op reg, imd
+#	op mem, imd
+# codea is the OpCode for following situations
+#	op  al, imd
+#	op  ax, imd
+#	op eax, imd
+#	op rax, imd TODO
+opCodes = {
+	"add": {"ops": 2, "coder": 0b000000, "codei": 0b100000000, "codea": 0b000001},
+	"or" : {"ops": 2, "coder": 0b000010, "codei": 0b100000001, "codea": 0b0     },
+	"adc": {"ops": 2, "coder": 0b000100, "codei": 0b100000010, "codea": 0b0     },
+	"and": {"ops": 2, "coder": 0b001000, "codei": 0b100000100, "codea": 0b0     },
+	"mov": {"ops": 2, "coder": 0b100010, "codei": 0b1011     , "codea": 0b0     }, # mov alternate emcoding
 }
 
 registers = {

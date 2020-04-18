@@ -1,7 +1,8 @@
 # Assembler Program in Python
-# By Kamyar Mirzavaziri
+# by Kamyar Mirzavaziri
 
 import sys
+
 from instruction import Instruction
 
 def read():
@@ -13,7 +14,7 @@ def read():
 
 def assemble(assemblyFile):
 	currLineNo = 0
-	codes = []
+	instructions = []
 	for line in assemblyFile:
 		currLineNo += 1
 		splitedLine = line.split()
@@ -24,10 +25,12 @@ def assemble(assemblyFile):
 			continue
 		tail = " ".join(splitedLine[1:])
 		try:
-			codes.append(Instruction(head, tail))
+			instruction = Instruction()
+			instruction.fromAsm(head, tail)
+			instructions.append(instruction)
 		except Exception as e:
 			print("Error on line ", currLineNo, ": ", e, sep = '')
-	return codes
+	return instructions
 
 try:
 	assemblyFile = read()
