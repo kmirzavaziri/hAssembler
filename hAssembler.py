@@ -8,8 +8,6 @@ from instruction import Instruction
 def read():
 	if len(sys.argv) < 2:
 		raise Exception("No file specified!\nRight usage: python3 hAssembler.py test.asm")
-	if len(sys.argv) > 2:
-		raise Exception("Too many files specified!")
 	return open(sys.argv[1], 'r')
 
 def assemble(assemblyFile):
@@ -35,8 +33,13 @@ def assemble(assemblyFile):
 try:
 	assemblyFile = read()
 	instructions = assemble(assemblyFile)
-	for instruction in instructions:
-		print(instruction.toString())
+	if len(sys.argv) > 2 and sys.argv[2] == '--raw':
+		for instruction in instructions:
+			for byte in instruction.machineCode:
+				print(byte, end = ' ')
+	else:
+		for instruction in instructions:
+			print(instruction.toString())
 except Exception as e:
 	print(e)
 

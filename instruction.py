@@ -170,6 +170,9 @@ class Instruction:
 				self.setRegRm(self.operands[0]['data'])
 				# op 1
 				self.setRegReg(self.operands[1]['data'])
+				# may add two 0x66 prefixes
+				if len(self.prefix) == 2:
+					self.prefix = self.prefix[0:1]
 			# --------------- reg, mem ---------------
 			elif self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'mem':
 				# opCode
