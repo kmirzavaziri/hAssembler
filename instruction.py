@@ -128,7 +128,8 @@ class Instruction:
 
 	# --------------------------- TO-STRING FUNC ---------------------------
 	def toString(self):
-		return ' '.join(map("{0:02X}".format, self.machineCode)) + '\t' + self.assemblyCode
+		colW = 30
+		return ' '.join(map("{0:02X}".format, self.machineCode)).ljust(colW) + '\t' + self.assemblyCode
 
 	# ------------------------------ ASMTOOBJ ------------------------------
 	def fromAsm(self, head, tail):
@@ -274,11 +275,11 @@ class Instruction:
 
 		if disp == 0 and base['code'] != 100 and base['code'] != 101:
 			self.mod = 0b00
-		elif disp < 0b1 << 8:
+		elif disp.bit_length() <= 8:
 			self.mod = 0b01
 			self.rm = 0b101
 			self.setDisp(disp, 8)
-		elif disp < 0b1 << 32:
+		elif disp.bit_length() <= 32:
 			self.mod = 0b10
 			self.rm = 0b101
 			self.setDisp(disp, 32)
