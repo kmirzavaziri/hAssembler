@@ -1,37 +1,39 @@
 # Assembler Program in Python
 # By Kamyar Mirzavaziri
+
 import sys
 from instruction import Instruction
 
 def read():
 	if len(sys.argv) < 2:
-		raise Exception("No File Specified!")
+		raise Exception("No file specified!\nRight usage: python3 hAssembler.py test.asm")
+	if len(sys.argv) > 2:
+		raise Exception("Too many files specified!")
 	return open(sys.argv[1], 'r')
 
-def write(bits): # TODO
-	OutputFile = open("a.out", "wb")
-	OutputFile.write(bytes)
-
 def assemble(assemblyFile):
-	bytes = []
+	currLineNo = 0
+	codes = []
 	for line in assemblyFile:
+		currLineNo += 1
 		splitedLine = line.split()
 		if len(splitedLine) < 1:
 			continue
 		head = splitedLine[0]
 		if len(head) < 1 or head[0] == '#':
 			continue
-		tail = line[len(head):]
+		tail = " ".join(splitedLine[1:])
 		try:
-			bytes += Instruction(head, tail).toMachineCode()
+			codes.append(Instruction(head, tail))
 		except Exception as e:
-			print(e)
-	return bytearray(bytes)
+			print("Error on line ", currLineNo, ": ", e, sep = '')
+	return codes
 
 try:
 	assemblyFile = read()
-	bytes = assemble(assemblyFile)
-	print(list(map(hex, bytes)))
+	instructions = assemble(assemblyFile)
+	for instruction in instructions:
+		print(instruction.toString())
 except Exception as e:
 	print(e)
 
