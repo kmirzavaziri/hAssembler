@@ -1,6 +1,6 @@
 # Instruction Class
 # by Kamyar Mirzavaziri
-# Contains a class called Instruction which stores all datas of a single instruction and can print it in both assembly and machine language
+# Contains a class called Instruction which stores all datas of a single instruction and can return it in both assembly and machine language
 
 from tables import *
 from eval import evaluate
@@ -23,7 +23,7 @@ def operand(op):
 		try:
 			return {'type': 'imd', 'data': evaluate(op)}
 		except:
-			raise Exception("unable to evalute immediate data expression")
+			raise Exception("invalid operand: '" + op + "'")
 	# memory
 	else:
 		splittedOp = op.split('+')
@@ -79,17 +79,17 @@ def operand(op):
 					# else we should put it in index
 					else:
 						if index != {}:
-							raise Exception("'[" + op + "]' is not a valid base/index expression")
+							raise Exception("invalid base/index expression: too many registers")
 						else:
 							index = tmpIndex					
 							scale = tmpScale
 					# excluding invalid scales
 					if not scale in [1,2,4,8]:
-						raise Exception("'[" + op + "]' is not a valid base/index expression")
+						raise Exception("invalid base/index expression: invalid scale '" + scale + "'")
 		if base != {} and base['size'] < 32:
-			raise Exception("'[" + op + "]' is not a valid base/index expression")
-		if index != {} and index['size'] < 32: # TODO
-			raise Exception("'[" + op + "]' is not a valid base/index expression")
+			raise Exception("invalid base/index expression: base should be 32-bit or 64-bit register")
+		if base != {} and index != {} and base['size'] != index['size']:
+			raise Exception("'[" + op + "]' is not a valid base/index expression: base and index type mismatch")
 			
 		return {'type': 'mem', 'data': {'base': base, 'index': index, 'scale': scale, 'disp': disp}}
 
@@ -200,13 +200,11 @@ class Instruction:
 			# --------------- mem, reg ---------------
 			elif self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'reg':
 				# opCode
-				self.mainOpCode = self.operator['coder'] # TODO
-				# addrMode
-				self.addrMode = True # TODO
+				self.mainOpCode = self.operator['coder']
 				# direction
 				self.direction = 0b0
 				# op 0
-				# TODO mem
+				self.setMem(self.operands[0]['data'])
 				# op 1
 				self.setRegReg(self.operands[1]['data'])
 			# --------------- mem, mem ---------------
@@ -272,32 +270,54 @@ class Instruction:
 		index = val['index']
 		scale = val['scale']
 		disp = val['disp']
-
-		if disp == 0 and base['code'] != 100 and base['code'] != 101:
+		
+		# taking care of displacement
+		if disp == 0 and (base == {} or (base['code'] != 0b100 and base['code'] != 0b101)):
 			self.mod = 0b00
 		elif disp.bit_length() <= 8:
 			self.mod = 0b01
-			self.rm = 0b101
 			self.setDisp(disp, 8)
 		elif disp.bit_length() <= 32:
 			self.mod = 0b10
-			self.rm = 0b101
 			self.setDisp(disp, 32)
 		else:
 			raise Exception(hex(disp) + " displacement overflow")
 
-		if val['index'] == {} and val['base'] == {}:
-			#TODO
-			val = val
-		elif val['index'] == {} and val['base'] != {}:
-			self.rm = val['base']['code']
-			self.setRegSize(val['base']['size'], True)
-		elif val['index'] != {} and val['base'] == {}:
-			#TODO
-			val = val
-		elif val['index'] != {} and val['base'] != {}:
-			#TODO
-			val = val
+		# scaled addressing [scale*index]
+		if index != {} and base == {}:
+			self.mod = 0b00
+			base = {**registers['ebp'], 'name': 'ebp'}
+			self.setDisp(disp, 32)
+		# direct addressing [disp]
+		elif index == {} and base == {}:
+			self.mod = 0b00
+			base = {**registers['ebp'], 'name': 'ebp'}
+			index = {**registers['esp'], 'name': 'esp'}
+			scale = 1
+			self.setDisp(disp, 32)
+			
+		# TODO working on special cases esp, ebp
+		
+		# register addressing [base]
+		if index == {} and base != {}:
+			self.rm = base['code']
+			self.setRegSize(base['size'], True)
+		# complete addresing [base + scale * index + disp]
+		elif index != {} and base != {}:
+			self.rm = 0b100
+			self.sib = True
+			if scale == 1:
+				self.scale = 0b00
+			elif scale == 2:
+				self.scale = 0b01
+			elif scale == 4:
+				self.scale = 0b10
+			elif scale == 8:
+				self.scale = 0b11
+			self.index = index['code']
+			self.base = base['code']
+			if self.index != 0b100:
+				self.setRegSize(base['size'], True)
 
 	# ---------------------------- ASSEMBLY CODE ---------------------------
 	@property
@@ -319,7 +339,7 @@ class Instruction:
 				if base == {} and index == {}:
 					operands.append('[' + hex(disp) + ']')
 				elif base == {} and index != {}:
-					operands.append('[' + index['name'] + '*' + scale + dispStr + ']')
+					operands.append('[' + index['name'] + '*' + hex(scale) + dispStr + ']')
 				elif base != {} and index == {}:
 					operands.append('[' + base['name'] + dispStr + ']')
 				elif base != {} and index != {}:
@@ -348,7 +368,6 @@ class Instruction:
 			addrMode = [ (self.mod << 6) | (self.reg << 3) | (self.rm) ]
 		else:
 			addrMode = []
-		
 		return \
 			self.prefix + \
 			self.rex + \
