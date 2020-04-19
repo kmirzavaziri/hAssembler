@@ -1,5 +1,5 @@
 # Assembler & DisAssembler
-x64 Intel Instruction Assembler and Disassembler written in Python 3. See [Online GCC version](https://defuse.ca/online-x86-assembler.htm) as a refrence.
+x64 Intel Instruction Assembler and DisAssembler written in Python 3. See [Online GCC version](https://defuse.ca/online-x86-assembler.htm) as a refrence.
 
 ## Prerequisites
 
