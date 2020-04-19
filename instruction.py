@@ -86,10 +86,18 @@ def operand(op):
 					# excluding invalid scales
 					if not scale in [1,2,4,8]:
 						raise Exception("invalid base/index expression: invalid scale '" + scale + "'")
+		# catching some errors
 		if base != {} and base['size'] < 32:
 			raise Exception("invalid base/index expression: base should be 32-bit or 64-bit register")
 		if base != {} and index != {} and base['size'] != index['size']:
-			raise Exception("'[" + op + "]' is not a valid base/index expression: base and index type mismatch")
+			raise Exception("invalid base/index expression: base and index type mismatch")
+		if index != {} and index['name'] == 'esp':
+			if scale == 1:
+				tmp = base
+				base = index
+				index = tmp
+			else:
+				raise Exception("invalid base/index expression: 'esp' cannot be index")
 			
 		return {'type': 'mem', 'data': {'base': base, 'index': index, 'scale': scale, 'disp': disp}}
 
@@ -275,7 +283,7 @@ class Instruction:
 		disp = val['disp']
 		
 		# taking care of displacement
-		if disp == 0 and (base == {} or (base['code'] != 0b100 and base['code'] != 0b101)):
+		if disp == 0 and (base == {} or base['code'] != 0b101):
 			self.mod = 0b00
 		elif disp.bit_length() <= 8:
 			self.mod = 0b01
@@ -285,6 +293,12 @@ class Instruction:
 			self.setDisp(disp, 32)
 		else:
 			raise Exception(hex(disp) + " displacement overflow")
+
+		# esp special case
+		if index == {} and base != {} and base['code'] == 0b100:
+			index = base
+			self.rm = base['code']
+			self.setRegSize(base['size'], True)
 
 		# scaled addressing [scale*index]
 		if index != {} and base == {}:
@@ -298,9 +312,8 @@ class Instruction:
 			index = registers['esp']
 			scale = 1
 			self.setDisp(disp, 32)
-			
-		# TODO working on special cases esp, ebp
-		
+
+
 		# register addressing [base]
 		if index == {} and base != {}:
 			self.rm = base['code']

@@ -25,6 +25,8 @@ def tokenize(raw):
 	raw = raw.replace("-", " - ")
 	raw = raw.replace("*", " * ")
 	raw = raw.replace("/", " / ")
+	raw = raw.replace("(", " ( ")
+	raw = raw.replace(")", " ) ")
 	return raw
 
 # Returns value of expression after evaluation. 

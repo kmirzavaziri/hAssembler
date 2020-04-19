@@ -12,6 +12,8 @@ adc dx, 0x3545
 and al, al
 # TODO al ax eax <- imd
 #add al, 0xAA
+#add ax, 0x77
+#add eax, 0x1377
 add bl, 0xAA
 # 8-bit addressing
 #add bh, [bl]
@@ -58,10 +60,11 @@ mov edx, [eax * 8 + 0xAA]
 #???mov edx, [ebp + eax * 8 + 0xAA]
 mov edx, [eax * 8 + 0xAABB]
 mov edx, [ebp + eax * 8 + 0xAABB]
+add bx, [42 + ebx * 2 + 4 + ecx + 5 + 3 - 2 * 3]
+# esp index
+#add bx, [2*esp]
 # HERE
-#add bx, [esp]
-#add bx, [42/2 + ebx * 2 + 4 + ecx * 1 + 5 + 3 - 2 * 3]
-#add ax, 0x77
+add bx, [esp]
 
 #test ax, [ebx]
 #test cx, [edx]
