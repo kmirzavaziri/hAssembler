@@ -388,6 +388,30 @@ class Instruction:
 	# ---------------------------- MACHINE CODE ----------------------------
 	@property
 	def machineCode(self):
+		# REX: B from rm
+		if self.rm & 0b1000 == 0b1000:
+			self.rex = True
+			self.rexB = 0b1
+			self.rm &= 0b111
+
+		# REX: R from reg
+		if self.reg & 0b1000 == 0b1000:
+			self.rex = True
+			self.rexR = 0b1
+			self.reg &= 0b111
+
+		# REX: B from base
+		if self.base & 0b1000 == 0b1000:
+			self.rex = True
+			self.rexB = 0b1
+			self.base &= 0b111
+
+		# REX: X from index
+		if self.index & 0b1000 == 0b1000:
+			self.rex = True
+			self.rexX = 0b1
+			self.index &= 0b111
+
 		rex = []
 		if self.rex:
 			rex = [ 0b0100 << 4 | (self.rexW << 3) | (self.rexR << 2) | (self.rexX << 1) | (self.rexB) ]

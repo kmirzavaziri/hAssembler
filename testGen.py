@@ -31,8 +31,12 @@ for op in nBinO:
 		f.write(op + ' cx, dx\n')
 		f.write(op + ' eax, ebx\n')
 		f.write(op + ' ecx, edx\n')
+		# 64-bits
 		f.write(op + ' rax, rbx\n')
 		f.write(op + ' rcx, rdx\n')
+		f.write(op + ' r12, rbx\n')
+		f.write(op + ' r12d, edx\n')
+		f.write(op + ' r12w, bx\n')
 	# ---------------------------------- op reg, mem ----------------------------------
 	# op reg, [base]
 	if case < 0 or case == 1:
