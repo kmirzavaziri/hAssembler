@@ -35,6 +35,14 @@ python3 tester.py test.asm
 
 to see the result of comparing.
 
+If no file is specified, i. e.,
+
+```
+python3 tester.py
+```
+
+it will generate a complete set of tests and compare our python code with online code for all tests.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details

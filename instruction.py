@@ -18,7 +18,7 @@ def operand(op):
 	if not isMemory:
 		# register
 		if op in registers:
-			return {'type': 'reg', 'data': {**registers[op] , 'name': op}}
+			return {'type': 'reg', 'data': registers[op]}
 		# immediate data
 		try:
 			return {'type': 'imd', 'data': evaluate(op)}
@@ -42,10 +42,10 @@ def operand(op):
 				if exp in registers:
 					# treating as base
 					if base == {}:
-						base = {**registers[exp] , 'name': exp}
+						base = registers[exp]
 					# treating as index
 					elif index == {}:
-							index = {**registers[exp] , 'name': exp}
+							index = registers[exp]
 							scale = 1
 					# both are currently occupied
 					else:
@@ -67,7 +67,7 @@ def operand(op):
 						except:
 							if innerExp in registers:
 								if tmpIndex == {}:
-									tmpIndex = {**registers[innerExp] , 'name': innerExp}
+									tmpIndex = registers[innerExp]
 								else:
 									raise Exception("invalid base/index expression: too many registers")
 							# this innerExp can't be anything other than constant or register
@@ -141,7 +141,7 @@ class Instruction:
 			raise Exception("no such instruction: '" + raw + "'")
 
 		# Proccess head and tail
-		self.operator = {**opCodes[head], 'name': head}
+		self.operator = opCodes[head]
 		self.operands = tail.split(',')
 		if self.operands == ['']:
 			self.operands = []
@@ -289,13 +289,13 @@ class Instruction:
 		# scaled addressing [scale*index]
 		if index != {} and base == {}:
 			self.mod = 0b00
-			base = {**registers['ebp'], 'name': 'ebp'}
+			base = registers['ebp']
 			self.setDisp(disp, 32)
 		# direct addressing [disp]
 		elif index == {} and base == {}:
 			self.mod = 0b00
-			base = {**registers['ebp'], 'name': 'ebp'}
-			index = {**registers['esp'], 'name': 'esp'}
+			base = registers['ebp']
+			index = registers['esp']
 			scale = 1
 			self.setDisp(disp, 32)
 			

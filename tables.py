@@ -16,41 +16,48 @@
 #	op eax, imd
 #	op rax, imd TODO
 opCodes = {
-	"add": {"ops": 2, "coder": 0b000000, "codei": 0b100000000, "codea": 0b000001},
-	"or" : {"ops": 2, "coder": 0b000010, "codei": 0b100000001, "codea": 0b0     },
-	"adc": {"ops": 2, "coder": 0b000100, "codei": 0b100000010, "codea": 0b0     },
-	"and": {"ops": 2, "coder": 0b001000, "codei": 0b100000100, "codea": 0b0     },
-	"mov": {"ops": 2, "coder": 0b100010, "codei": 0b1011     , "codea": 0b0     }, # mov alternate emcoding
+	# normal binary
+	"add" : {"ops": 2, "coder": 0b000000, "codei": 0b100000000, "codea": 0b000001, "name": "add" },
+	"or"  : {"ops": 2, "coder": 0b000010, "codei": 0b100000001, "codea": 0b000011, "name": "or"  },
+	"adc" : {"ops": 2, "coder": 0b000100, "codei": 0b100000010, "codea": 0b000101, "name": "adc" },
+	"sbb" : {"ops": 2, "coder": 0b000110, "codei": 0b100000011, "codea": 0b000111, "name": "sbb" },
+	"and" : {"ops": 2, "coder": 0b001000, "codei": 0b100000100, "codea": 0b001001, "name": "and" },
+	"sub" : {"ops": 2, "coder": 0b001010, "codei": 0b100000101, "codea": 0b001011, "name": "sub" },
+	"xor" : {"ops": 2, "coder": 0b001100, "codei": 0b100000110, "codea": 0b001101, "name": "xor" },
+	"cmp" : {"ops": 2, "coder": 0b001110, "codei": 0b100000111, "codea": 0b001111, "name": "cmp" },
+#	"test": {"ops": 2, "coder": 0b100001, "codei": 0b111101000, "codea": 0b101010, "name": "test"}, # TODO
+	"mov" : {"ops": 2, "coder": 0b100010, "codei": 0b1011     , "codea": 0b101100, "name": "mov" }, # mov alternate encoding
+	# dec inc xchg xadd imul idiv bsf bsr stc clc std cld jmp jcc jcxz jecxz loop loope loopne shl shr neg not call ret syscall TODO
 }
 
 registers = {
 	# 8-bits
-	'al': {'size': 8, 'code': 0b000},
-	'cl': {'size': 8, 'code': 0b001},
-	'dl': {'size': 8, 'code': 0b010},
-	'bl': {'size': 8, 'code': 0b011},
-	'ah': {'size': 8, 'code': 0b100},
-	'ch': {'size': 8, 'code': 0b101},
-	'dh': {'size': 8, 'code': 0b110},
-	'bh': {'size': 8, 'code': 0b111},
+	'al': {'size': 8, 'code': 0b000, "name": "al"},
+	'cl': {'size': 8, 'code': 0b001, "name": "cl"},
+	'dl': {'size': 8, 'code': 0b010, "name": "dl"},
+	'bl': {'size': 8, 'code': 0b011, "name": "bl"},
+	'ah': {'size': 8, 'code': 0b100, "name": "ah"},
+	'ch': {'size': 8, 'code': 0b101, "name": "ch"},
+	'dh': {'size': 8, 'code': 0b110, "name": "dh"},
+	'bh': {'size': 8, 'code': 0b111, "name": "bh"},
 	# 16-bits
-	'ax': {'size': 16, 'code': 0b000},
-	'cx': {'size': 16, 'code': 0b001},
-	'dx': {'size': 16, 'code': 0b010},
-	'bx': {'size': 16, 'code': 0b011},
-	'sp': {'size': 16, 'code': 0b100},
-	'bp': {'size': 16, 'code': 0b101},
-	'si': {'size': 16, 'code': 0b110},
-	'di': {'size': 16, 'code': 0b111},
+	'ax': {'size': 16, 'code': 0b000, "name": "ax"},
+	'cx': {'size': 16, 'code': 0b001, "name": "cx"},
+	'dx': {'size': 16, 'code': 0b010, "name": "dx"},
+	'bx': {'size': 16, 'code': 0b011, "name": "bx"},
+	'sp': {'size': 16, 'code': 0b100, "name": "sp"},
+	'bp': {'size': 16, 'code': 0b101, "name": "bp"},
+	'si': {'size': 16, 'code': 0b110, "name": "si"},
+	'di': {'size': 16, 'code': 0b111, "name": "di"},
 	# 32-bits
-	'eax': {'size': 32, 'code': 0b000},
-	'ecx': {'size': 32, 'code': 0b001},
-	'edx': {'size': 32, 'code': 0b010},
-	'ebx': {'size': 32, 'code': 0b011},
-	'esp': {'size': 32, 'code': 0b100},
-	'ebp': {'size': 32, 'code': 0b101},
-	'esi': {'size': 32, 'code': 0b110},
-	'edi': {'size': 32, 'code': 0b111}
+	'eax': {'size': 32, 'code': 0b000, "name": "eax"},
+	'ecx': {'size': 32, 'code': 0b001, "name": "ecx"},
+	'edx': {'size': 32, 'code': 0b010, "name": "edx"},
+	'ebx': {'size': 32, 'code': 0b011, "name": "ebx"},
+	'esp': {'size': 32, 'code': 0b100, "name": "esp"},
+	'ebp': {'size': 32, 'code': 0b101, "name": "ebp"},
+	'esi': {'size': 32, 'code': 0b110, "name": "esi"},
+	'edi': {'size': 32, 'code': 0b111, "name": "edi"},
 	# 64-bits TODO
 }
 

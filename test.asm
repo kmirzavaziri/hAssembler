@@ -63,3 +63,10 @@ mov edx, [ebp + eax * 8 + 0xAABB]
 #add bx, [42/2 + ebx * 2 + 4 + ecx * 1 + 5 + 3 - 2 * 3]
 #add ax, 0x77
 
+#test ax, [ebx]
+#test cx, [edx]
+#test ebx, [eax]
+#test esi, [ecx]
+
+
+
