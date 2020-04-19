@@ -91,7 +91,7 @@ def operand(op):
 			raise Exception("invalid base/index expression: base should be 32-bit or 64-bit register")
 		if base != {} and index != {} and base['size'] != index['size']:
 			raise Exception("invalid base/index expression: base and index type mismatch")
-		if index != {} and index['name'] == 'esp':
+		if index != {} and index['code'] == 0b100:
 			if scale == 1:
 				tmp = base
 				base = index
@@ -109,8 +109,13 @@ class Instruction:
 	# ------------------------- Machine Code Data --------------------------
 	# Prefix: 0-4 B
 	prefix = []
-	# Rex: 0-1 B
-	rex = []
+	# REX: 0-1 B ?= 2 b + 3 b + 3 b
+	# (if [rex] then we have REX byte, else we don't)
+	rex = False
+	rexW = 0b0
+	rexR = 0b0
+	rexX = 0b0
+	rexB = 0b0
 	# OpCode: 1 B = 6 b + 1 b + 1 b
 	# Note: if not [moveAlter] then OpCode (1 B) = mainOpCode (4 b) + W (1 b) + reg (3 b)
 	moveAlter = False
@@ -165,6 +170,14 @@ class Instruction:
 			self.operator["ops"] = 1 # TODO
 		# Binary Operator
 		elif self.operator["ops"] == 2:
+			##########################################
+			# -------- handling special cases --------
+			if(self.operator['name'] == 'test' and self.operands[1]['type'] == 'mem'):
+				tmp = self.operands[0]
+				self.operands[0] = self.operands[1]
+				self.operands[1] = tmp
+
+			##########################################
 			# --------------- reg, reg ---------------
 			if self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'reg':
 				# same size condition
@@ -259,11 +272,14 @@ class Instruction:
 				self.prefix = self.prefix + [0x66]
 			elif size == 32:
 				self.w = 0b1
-			# TODO 64-bits
+			elif size == 64:
+				self.rex = True
+				self.w = 0b1
+				self.rexW = 0b1
 		else:
 			if size == 32:
 				self.prefix = [0x67] + self.prefix
-			# TODO 64-bits
+
 	def setImdData(self, val, size):
 		self.data = [0x00] * (size // 8)
 		for i in range(len(self.data)):
@@ -285,10 +301,10 @@ class Instruction:
 		# taking care of displacement
 		if disp == 0 and (base == {} or base['code'] != 0b101):
 			self.mod = 0b00
-		elif disp.bit_length() <= 8:
+		elif disp.bit_length() <= 7:
 			self.mod = 0b01
 			self.setDisp(disp, 8)
-		elif disp.bit_length() <= 32:
+		elif disp.bit_length() <= 31:
 			self.mod = 0b10
 			self.setDisp(disp, 32)
 		else:
@@ -300,11 +316,16 @@ class Instruction:
 			self.rm = base['code']
 			self.setRegSize(base['size'], True)
 
+		# ebp special case
+		if  index != {} and base != {} and base['code'] == 0b101:
+			self.setRegSize(base['size'], True)
+
 		# scaled addressing [scale*index]
 		if index != {} and base == {}:
 			self.mod = 0b00
 			base = registers['ebp']
 			self.setDisp(disp, 32)
+			self.setRegSize(index['size'], True)
 		# direct addressing [disp]
 		elif index == {} and base == {}:
 			self.mod = 0b00
@@ -332,7 +353,7 @@ class Instruction:
 				self.scale = 0b11
 			self.index = index['code']
 			self.base = base['code']
-			if self.index != 0b100:
+			if self.index != 0b100 and self.base != 0b101:
 				self.setRegSize(base['size'], True)
 
 	# ---------------------------- ASSEMBLY CODE ---------------------------
@@ -367,6 +388,12 @@ class Instruction:
 	# ---------------------------- MACHINE CODE ----------------------------
 	@property
 	def machineCode(self):
+		rex = []
+		if self.rex:
+			rex = [ 0b0100 << 4 | (self.rexW << 3) | (self.rexR << 2) | (self.rexX << 1) | (self.rexB) ]
+		else:
+			rex = []
+
 		sib = []
 		if self.sib:
 			sib = [ (self.scale << 6) | (self.index << 3) | (self.base) ]
@@ -386,7 +413,7 @@ class Instruction:
 			addrMode = []
 		return \
 			self.prefix + \
-			self.rex + \
+			rex + \
 			opCode + \
 			addrMode + \
 			sib + \

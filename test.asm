@@ -56,13 +56,14 @@ mov edx, [0x5555551e]
 mov edx, [eax * 8]
 mov edx, [ebp + eax * 8]
 mov edx, [eax * 8 + 0xAA]
-# TODO ??
-#???mov edx, [ebp + eax * 8 + 0xAA]
+mov edx, [ebp + eax * 8 + 0xAA]
 mov edx, [eax * 8 + 0xAABB]
 mov edx, [ebp + eax * 8 + 0xAABB]
 add bx, [42 + ebx * 2 + 4 + ecx + 5 + 3 - 2 * 3]
-# esp index
-#add bx, [2*esp]
+add bx, [2*esp]
+add bx, [eax]
+add bx, [eax + 2]
+add bx, [2*eax]
 # HERE
 add bx, [esp]
 
