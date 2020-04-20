@@ -30,15 +30,7 @@ To compare this python assembler with this [Online Assembler](https://defuse.ca/
 python3 tester.py foo.asm
 ```
 
-where `foo.asm` is test cases file. We already provided a set of good tests in `test.asm`, use 
-
-```
-python3 tester.py test.asm
-```
-
-to see the result of comparing.
-
-If no file is specified, i. e.,
+where `foo.asm` is test cases file. If no file is specified, i. e.,
 
 ```
 python3 tester.py
