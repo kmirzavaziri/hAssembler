@@ -25,8 +25,9 @@ opCodes = {
 	"sub" : {"ops": 2, "coder": 0b001010, "codei": 0b100000101, "codea": 0b001011, "name": "sub" },
 	"xor" : {"ops": 2, "coder": 0b001100, "codei": 0b100000110, "codea": 0b001101, "name": "xor" },
 	"cmp" : {"ops": 2, "coder": 0b001110, "codei": 0b100000111, "codea": 0b001111, "name": "cmp" },
-	"test": {"ops": 2, "coder": 0b100001, "codei": 0b111101000, "codea": 0b101010, "name": "test"}, # TODO
+	"test": {"ops": 2, "coder": 0b100001, "codei": 0b111101000, "codea": 0b101010, "name": "test"},
 	"mov" : {"ops": 2, "coder": 0b100010, "codei": 0b1011     , "codea": 0b101100, "name": "mov" }, # mov alternate encoding
+
 	# dec inc xchg xadd imul idiv bsf bsr stc clc std cld jmp jcc jcxz jecxz loop loope loopne shl shr neg not call ret syscall TODO
 }
 

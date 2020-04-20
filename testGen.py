@@ -31,31 +31,34 @@ for op in nBinO:
 		f.write(op + ' cx, dx\n')
 		f.write(op + ' eax, ebx\n')
 		f.write(op + ' ecx, edx\n')
-		# 64-bits
 		f.write(op + ' rax, rbx\n')
 		f.write(op + ' rcx, rdx\n')
-		f.write(op + ' r12, rbx\n')
+		f.write(op + ' r10, rbx\n')
 		f.write(op + ' r12d, edx\n')
-		f.write(op + ' r12w, bx\n')
+		f.write(op + ' r9w, bx\n')
 	# ---------------------------------- op reg, mem ----------------------------------
 	# op reg, [base]
 	if case < 0 or case == 1:
-		f.write(op + ' ax, [ebx + 0]\n')
-		f.write(op + ' cx, [edx]\n')
+		f.write(op + ' ax, [r11d + 0]\n')
+		f.write(op + ' r8w, [edx]\n')
 		f.write(op + ' ebx, [eax]\n')
 		f.write(op + ' esi, [42 + ecx + 0 - 21 * 2]\n')
+		f.write(op + ' r9d, [esp]\n')
+		f.write(op + ' r8d, [ebp]\n')
 		f.write(op + ' esi, [esp]\n')
 		f.write(op + ' esi, [ebp]\n')
 		# 64-bits
 		f.write(op + ' ebx, [rax]\n')
 		f.write(op + ' rdx, [ebx + 0]\n')
-		f.write(op + ' cx, [rdx]\n')
+		f.write(op + ' cx, [r14d]\n')
 		f.write(op + ' rbx, [eax]\n')
-		f.write(op + ' esi, [42 + rcx + 0 - 21 * 2]\n')
-		f.write(op + ' esi, [esp]\n')
+		f.write(op + ' esi, [42 + r11 + 0 - 21 * 2]\n')
 		f.write(op + ' esi, [rsp]\n')
-		f.write(op + ' rsi, [esp]\n')
 		f.write(op + ' rsi, [rbp]\n')
+		f.write(op + ' r11d, [r12]\n')
+		f.write(op + ' r15w, [r13]\n')
+		f.write(op + ' r9, [r12d]\n')
+		f.write(op + ' r15, [r13d]\n')
 	# op reg, [disp]
 	if case < 0 or case == 2:
 		f.write(op + ' ax, [0x1]\n')
@@ -69,6 +72,9 @@ for op in nBinO:
 		f.write(op + ' rax, [0x1]\n')
 		f.write(op + ' rbx, [0x1000 - 0x2000]\n')
 		f.write(op + ' rsi, [0x99]\n')
+		f.write(op + ' r8d, [0x1]\n')
+		f.write(op + ' r12, [0x1000 - 0x2000]\n')
+		f.write(op + ' r13w, [0x99]\n')
 	# op reg, [scale * index]
 	if case < 0 or case == 3:
 		f.write(op + ' ax, [eax * 2]\n')
@@ -84,6 +90,11 @@ for op in nBinO:
 		f.write(op + ' rbx, [2 * rax * 2]\n')
 		f.write(op + ' rsi, [4 * rcx]\n')
 		f.write(op + ' rsi, [8 * rbp]\n')
+		f.write(op + ' eax, [r8d * 2]\n')
+		f.write(op + ' rsp, [r8 * 2]\n')
+		f.write(op + ' r12, [2 * r11]\n')
+		f.write(op + ' r13w, [2 * r12 * 2]\n')
+		f.write(op + ' r14, [4 * r13]\n')
 	# op reg, [base + disp]
 	if case < 0 or case == 4:
 		f.write(op + ' ax, [ebx + 0x42]\n')
@@ -106,6 +117,14 @@ for op in nBinO:
 		f.write(op + ' al, [rsp + 0xABCDE]\n')
 		f.write(op + ' rdx, [rbp + 0xB]\n')
 		f.write(op + ' bl, [rbp + 0xA0C]\n')
+		f.write(op + ' ax, [r8 + 0x42]\n')
+		f.write(op + ' rax, [r8d + 0x99]\n')
+		f.write(op + ' r10d, [ebx + 0 - 0x99]\n')
+		f.write(op + ' r11w, [r12d + 0x1234]\n')
+		f.write(op + ' r12, [r13d + 0xA]\n')
+		f.write(op + ' al, [r13d + 0xABCDE]\n')
+		f.write(op + ' r13d, [r12d + 0xB]\n')
+		f.write(op + ' r9w, [r12d + 0xA0C]\n')
 	# op reg, [base + scale * index]
 	if case < 0 or case == 5:
 		f.write(op + ' ax, [ebx + ebx * 2]\n')
@@ -129,6 +148,17 @@ for op in nBinO:
 		f.write(op + ' bp, [rbp + rax]\n')
 		f.write(op + ' rdx, [rbp + rsp]\n')
 		f.write(op + ' ah, [rax + 8 * rax]\n')
+		f.write(op + ' r8, [r11 + r11 * 2]\n')
+		f.write(op + ' cx, [r11 + 2 * rdx]\n')
+		f.write(op + ' r15, [r13 + 2 * r8 * 2]\n')
+		f.write(op + ' eax, [r12 + 4 * r11]\n')
+		f.write(op + ' r10, [r13 + 2 * 4 * r12]\n')
+		f.write(op + ' r11d, [r12 + r12]\n')
+		f.write(op + ' r11w, [r8d + r12d]\n')
+		f.write(op + ' r12w, [r12 + r8]\n')
+		f.write(op + ' r11, [r12d + r13d]\n')
+		f.write(op + ' r11, [r12 + r13]\n')
+		f.write(op + ' r9, [r8d + 8 * r8d]\n')
 	# op reg, [scale * index + disp]
 	if case < 0 or case == 6:
 		f.write(op + ' ax, [eax * 2 + 7]\n')
@@ -144,6 +174,12 @@ for op in nBinO:
 		f.write(op + ' rbx, [2 * rax * 2 + 0b10]\n')
 		f.write(op + ' rsi, [4 * rcx + 0x77]\n')
 		f.write(op + ' rsi, [0x99 + 8 * rbp]\n')
+		f.write(op + ' ax, [r8 * 2 + 0b0 - 0b1000000]\n')
+		f.write(op + ' ax, [r8d * 2 + 0b0 - 0b1000000]\n')
+		f.write(op + ' r11, [r8 * 2 + 0b0 - 0b1000000]\n')
+		f.write(op + ' r9w, [r8d * 2 + 0b0 - 0b1000000]\n')
+		f.write(op + ' rsi, [0 - 0x99 + 8 * r12 + 0b1]\n')
+		f.write(op + ' rsi, [0 - 0x99 + 8 * r12d + 0b1]\n')
 	# op reg, [base + scale * index + disp]
 	if case < 0 or case == 7:
 		f.write(op + ' ax, [ebx + ebx * 2 + 0x42]\n')
@@ -160,7 +196,8 @@ for op in nBinO:
 		f.write(op + ' bp, [ebp + 0b00111 * 3 - 2 + eax]\n')
 		f.write(op + ' al, [ebp + 42 + 0x42 + esp]\n')
 		f.write(op + ' ah, [eax + 8 * eax + 0b1001]\n')
-		# 64-bits
+	# op reg, [base + scale * index + disp] (64-bits)
+	if case < 0 or case == 8:
 		f.write(op + ' ax, [rbx + rbx * 2 + 0x42]\n')
 		f.write(op + ' rbx, [0x42 - 0x77 + rsp + 2 * rax * 2]\n')
 		f.write(op + ' rax, [0x21 + rbp + 4 * rcx]\n')
@@ -171,9 +208,20 @@ for op in nBinO:
 		f.write(op + ' bp, [rsp + 0b00111 * 3 - 2 + rax]\n')
 		f.write(op + ' al, [rbp + 42 + 0x42 + rsp]\n')
 		f.write(op + ' ah, [rax + 8 * rax + 0b1001]\n')
+		f.write(op + ' ax, [r10 + rbx * 2 + 0x42]\n')
+		f.write(op + ' r12w, [0x42 - 0x77 + r13 + 2 * rax * 2]\n')
+		f.write(op + ' rax, [0x21 + r12 + 4 * r10]\n')
+		f.write(op + ' r15w, [0x4221 + r12 + 4 * rcx]\n')
+		f.write(op + ' ebx, [r13d + 0x99 + 2 * 4 * r12d]\n')
+		f.write(op + ' dx, [r8d + 0b1010 - 0xA + r12d]\n')
+		f.write(op + ' r13w, [r8 + r12 + 0xDAF]\n')
+		f.write(op + ' bp, [r13d + 0b00111 * 3 - 2 + r8d]\n')
+		f.write(op + ' al, [r12 + 42 + 0x42 + r13]\n')
+		f.write(op + ' r11w, [r8d + 8 * r8d + 0b1001]\n')
+
 	# ---------------------------------- op mem, reg ----------------------------------
 	# op [base], reg
-	if case < 0 or case == 8:
+	if case < 0 or case == 9:
 		f.write(op + ' [ebx + 0], ax\n')
 		f.write(op + ' [edx], cx\n')
 		f.write(op + ' [eax], ebx\n')
@@ -190,8 +238,12 @@ for op in nBinO:
 		f.write(op + ' [rsp], esi\n')
 		f.write(op + ' [esp], rsi\n')
 		f.write(op + ' [rbp], rsi\n')
+		f.write(op + ' [r12], r11d\n')
+		f.write(op + ' [r13], r15w\n')
+		f.write(op + ' [r12d], r9\n')
+		f.write(op + ' [r13d], r15\n')
 	# op [disp], reg
-	if case < 0 or case == 9:
+	if case < 0 or case == 10:
 		f.write(op + ' [0x1], ax\n')
 		f.write(op + ' [0x0], al\n')
 		f.write(op + ' [0b10], cx\n')
@@ -203,8 +255,11 @@ for op in nBinO:
 		f.write(op + ' rax, [0x1]\n')
 		f.write(op + ' rbx, [0x1000 - 0x2000]\n')
 		f.write(op + ' rsi, [0x99]\n')
+		f.write(op + ' [0x1], r8d\n')
+		f.write(op + ' [0x1000 - 0x2000], r12\n')
+		f.write(op + ' [0x99], r13w\n')
 	# op [scale * index], reg
-	if case < 0 or case == 10:
+	if case < 0 or case == 11:
 		f.write(op + ' [eax * 2], ax\n')
 		f.write(op + ' [ebx * 2], ax\n')
 		f.write(op + ' [2 * edx], cx\n')
@@ -218,8 +273,13 @@ for op in nBinO:
 		f.write(op + ' rbx, [2 * rax * 2]\n')
 		f.write(op + ' rsi, [4 * rcx]\n')
 		f.write(op + ' rsi, [8 * rbp]\n')
+		f.write(op + ' [r8d * 2], eax\n')
+		f.write(op + ' [r8 * 2], rsp\n')
+		f.write(op + ' [2 * r11], r12\n')
+		f.write(op + ' [2 * r12 * 2], r13w\n')
+		f.write(op + ' [4 * r13], r14\n')
 	# op [base + disp], reg
-	if case < 0 or case == 11:
+	if case < 0 or case == 12:
 		f.write(op + ' [ebx + 0x77], ax\n')
 		f.write(op + ' [ebx + 0x99], eax\n')
 		f.write(op + ' [ebx + 0x1999], ebx\n')
@@ -238,8 +298,16 @@ for op in nBinO:
 		f.write(op + ' [rsp + 0xABCDE], al\n')
 		f.write(op + ' [rbp + 0xB], rdx\n')
 		f.write(op + ' [rbp + 0xA0C], bl\n')
+		f.write(op + ' [r8 + 0x42], ax\n')
+		f.write(op + ' [r8d + 0x99], rax\n')
+		f.write(op + ' [ebx + 0 - 0x99], r10d\n')
+		f.write(op + ' [r12d + 0x1234], r11w\n')
+		f.write(op + ' [r13d + 0xA], r12\n')
+		f.write(op + ' [r13d + 0xABCDE], al\n')
+		f.write(op + ' [r12d + 0xB], r13d\n')
+		f.write(op + ' [r12d + 0xA0C], r9w\n')
 	# op [base + scale * index], reg
-	if case < 0 or case == 12:
+	if case < 0 or case == 13:
 		f.write(op + ' [ebx + ebx * 2], ax\n')
 		f.write(op + ' [ecx + 2 * edx], cx\n')
 		f.write(op + ' [esp + 2 * eax * 2], edx\n')
@@ -261,8 +329,19 @@ for op in nBinO:
 		f.write(op + ' [rbp + rax], bp\n')
 		f.write(op + ' [rbp + rsp], rdx\n')
 		f.write(op + ' [rax + 8 * rax], ah\n')
+		f.write(op + ' [r11 + r11 * 2], r8\n')
+		f.write(op + ' [r11 + 2 * rdx], cx\n')
+		f.write(op + ' [r13 + 2 * r8 * 2], r15\n')
+		f.write(op + ' [r12 + 4 * r11], eax\n')
+		f.write(op + ' [r13 + 2 * 4 * r12], r10\n')
+		f.write(op + ' [r12 + r12], r11d\n')
+		f.write(op + ' [r8d + r12d], r11w\n')
+		f.write(op + ' [r12 + r8], r12w\n')
+		f.write(op + ' [r12d + r13d], r11\n')
+		f.write(op + ' [r12 + r13], r11\n')
+		f.write(op + ' [r8d + 8 * r8d], r9\n')
 	# op [scale * index + disp], reg
-	if case < 0 or case == 13:
+	if case < 0 or case == 14:
 		f.write(op + ' [eax * 2 + 7], ax\n')
 		f.write(op + ' [ebx * 2 + 0x77], ax\n')
 		f.write(op + ' [2 * edx + 0x99], cx\n')
@@ -276,8 +355,14 @@ for op in nBinO:
 		f.write(op + ' [2 * rax * 2 + 0b10], rbx\n')
 		f.write(op + ' [4 * rcx + 0x77], rsi\n')
 		f.write(op + ' [0x99 + 8 * rbp], rsi\n')
+		f.write(op + ' [r8 * 2 + 0b0 - 0b1000000], ax\n')
+		f.write(op + ' [r8d * 2 + 0b0 - 0b1000000], ax\n')
+		f.write(op + ' [r8 * 2 + 0b0 - 0b1000000], r11\n')
+		f.write(op + ' [r8d * 2 + 0b0 - 0b1000000], r9w\n')
+		f.write(op + ' [0 - 0x99 + 8 * r12 + 0b1], rsi\n')
+		f.write(op + ' [0 - 0x99 + 8 * r12d + 0b1], rsi\n')
 	# op [base + scale * index + disp], reg
-	if case < 0 or case == 14:
+	if case < 0 or case == 15:
 		f.write(op + ' [ebx + ebx * 2 + 0x42], ax\n')
 		f.write(op + ' [ecx + 2 * edx + 0xABCDE], cx\n')
 		f.write(op + ' [0x42 - 0x77 + esp + 2 * eax * 2], ebx\n')
@@ -291,7 +376,8 @@ for op in nBinO:
 		f.write(op + ' [eax + ebp + 0xDAF], dx\n')
 		f.write(op + ' [ebp + 0b00111 * 3 - 2 + eax], bp\n')
 		f.write(op + ' [ebp + 42 + 0x42 + esp], al\n')
-		# 64-bits
+	# op [base + scale * index + disp], reg (64-bits)
+	if case < 0 or case == 16:
 		f.write(op + ' [rbx + rbx * 2 + 0x42], ax\n')
 		f.write(op + ' [0x42 - 0x77 + rsp + 2 * rax * 2], rbx\n')
 		f.write(op + ' [0x21 + rbp + 4 * rcx], rax\n')
@@ -303,16 +389,27 @@ for op in nBinO:
 		f.write(op + ' [rbp + 42 + 0x42 + rsp], al\n')
 		f.write(op + ' [rax + 8 * rax + 0b1001], ah\n')
 		f.write(op + ' [eax + 8 * eax + 0b1001], ah\n')
+		f.write(op + ' [r10 + rbx * 2 + 0x42], ax\n')
+		f.write(op + ' [0x42 - 0x77 + r13 + 2 * rax * 2], r12w\n')
+		f.write(op + ' [0x21 + r12 + 4 * r10], rax\n')
+		f.write(op + ' [0x4221 + r12 + 4 * rcx], r15w\n')
+		f.write(op + ' [r13d + 0x99 + 2 * 4 * r12d], ebx\n')
+		f.write(op + ' [r8d + 0b1010 - 0xA + r12d], dx\n')
+		f.write(op + ' [r8 + r12 + 0xDAF], r13w\n')
+		f.write(op + ' [r13d + 0b00111 * 3 - 2 + r8d], bp\n')
+		f.write(op + ' [r12 + 42 + 0x42 + r13], al\n')
+		f.write(op + ' [r8d + 8 * r8d + 0b1001], r11w\n')
 
 	# ---------------------------------- op reg, imd ----------------------------------
+	# op normal reg, imd
 	if case < 0 or case == 15:
 		f.write(op + ' al, al\n')
+	# op al ax eax, imd
+	if case < 0 or case == 16:
+		f.write(op + ' al, al\n')
 	# op mem, imd
-	# op  al, imd
-	# op  ax, imd
-	# op eax, imd
-
-	# op 64-bits TODO
+	if case < 0 or case == 17:
+		f.write(op + ' al, al\n')
 
 f.close()
 

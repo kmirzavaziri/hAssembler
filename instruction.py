@@ -97,7 +97,7 @@ def operand(op):
 				base = index
 				index = tmp
 			else:
-				raise Exception("invalid base/index expression: 'esp' cannot be index")
+				raise Exception("invalid base/index expression: '" + index['name'] + "' cannot be index")
 			
 		return {'type': 'mem', 'data': {'base': base, 'index': index, 'scale': scale, 'disp': disp}}
 
@@ -293,13 +293,14 @@ class Instruction:
 			val >>= 8
 
 	def setMem(self, val):
+		fake = False
 		base = val['base']
 		index = val['index']
 		scale = val['scale']
 		disp = val['disp']
 		
 		# taking care of displacement
-		if disp == 0 and (base == {} or base['code'] != 0b101):
+		if disp == 0 and (base == {} or base['code'] & 0b111 != 0b101):
 			self.mod = 0b00
 		elif disp.bit_length() <= 7:
 			self.mod = 0b01
@@ -311,23 +312,28 @@ class Instruction:
 			raise Exception(hex(disp) + " displacement overflow")
 
 		# esp special case
-		if index == {} and base != {} and base['code'] == 0b100:
-			index = base
+		if index == {} and base != {} and base['code'] & 0b111 == 0b100:
+			fake = True
+			index = base.copy()
+			index['code'] &= 0b111
 			self.rm = base['code']
 			self.setRegSize(base['size'], True)
 
 		# ebp special case
-		if  index != {} and base != {} and base['code'] == 0b101:
+		if  index != {} and base != {} and base['code'] & 0b111 == 0b101:
+			fake = True
 			self.setRegSize(base['size'], True)
 
 		# scaled addressing [scale*index]
 		if index != {} and base == {}:
+			fake = True
 			self.mod = 0b00
 			base = registers['ebp']
 			self.setDisp(disp, 32)
 			self.setRegSize(index['size'], True)
 		# direct addressing [disp]
 		elif index == {} and base == {}:
+			fake = True
 			self.mod = 0b00
 			base = registers['ebp']
 			index = registers['esp']
@@ -353,7 +359,7 @@ class Instruction:
 				self.scale = 0b11
 			self.index = index['code']
 			self.base = base['code']
-			if self.index != 0b100 and self.base != 0b101:
+			if not fake:
 				self.setRegSize(base['size'], True)
 
 	# ---------------------------- ASSEMBLY CODE ---------------------------
