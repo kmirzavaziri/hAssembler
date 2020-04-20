@@ -5,7 +5,12 @@
 from tables import *
 from eval import evaluate
 
-# ------------------------------------------------ HELPER FUNCS ------------------------------------------------
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+#------------------------------------------------ HELPER FUNCS ------------------------------------------------#
+################################################################################################################
 def bitsLen(num):
 	if -2**7 <= num < 2**7:
 		return 8
@@ -26,8 +31,8 @@ def operand(op):
 	# Further Proccess
 	if not isMemory:
 		# register
-		if op in registers:
-			return {'type': 'reg', 'data': registers[op]}
+		if tableReg(op) != {}:
+			return {'type': 'reg', 'data': tableReg(op)}
 		# immediate data
 		try:
 			return {'type': 'imd', 'data': evaluate(op)}
@@ -48,13 +53,13 @@ def operand(op):
 			# this exp is not a constant
 			except:
 				# this exp is a register name
-				if exp in registers:
+				if tableReg(exp) != {}:
 					# treating as base
 					if base == {}:
-						base = registers[exp]
+						base = tableReg(exp)
 					# treating as index
 					elif index == {}:
-							index = registers[exp]
+							index = tableReg(exp)
 							scale = 1
 					# both are currently occupied
 					else:
@@ -74,9 +79,9 @@ def operand(op):
 							tmpScale *= evaluate(innerExp)
 						# this innerExp is not a constant (should be index which shouldn't be occupied)
 						except:
-							if innerExp in registers:
+							if tableReg(innerExp) != {}:
 								if tmpIndex == {}:
-									tmpIndex = registers[innerExp]
+									tmpIndex = tableReg(innerExp)
 								else:
 									raise Exception("invalid base/index expression: too many registers")
 							# this innerExp can't be anything other than constant or register
@@ -110,12 +115,22 @@ def operand(op):
 			
 		return {'type': 'mem', 'data': {'base': base, 'index': index, 'scale': scale, 'disp': disp}}
 
-# ---------------------------------------------- INSTRUCTION CLASS ---------------------------------------------
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+#---------------------------------------------- INSTRUCTION CLASS ---------------------------------------------#
+################################################################################################################
 class Instruction:
-	# ------------------------- Assembly Code Data -------------------------
+	########################################################################
+	#------------------------- Assembly Code Data -------------------------#
+	########################################################################
 	operator = {}
 	operands = []
-	# ------------------------- Machine Code Data --------------------------
+
+	########################################################################
+	#------------------------- Machine Code Data --------------------------#
+	########################################################################
 	# Prefix: 0-4 B
 	prefix = []
 	# REX: 0-1 B ?= 2 b + 3 b + 3 b
@@ -148,16 +163,27 @@ class Instruction:
 	# Data: 0-8 B
 	data = []
 
-	# --------------------------- TO-STRING FUNC ---------------------------
+	########################################################################
+	#--------------------------- TO-STRING FUNC ---------------------------#
+	########################################################################
 	def toString(self):
 		colW = 30
 		return ' '.join(map("{0:02X}".format, self.machineCode)).ljust(colW) + '\t' + self.assemblyCode
 
-	# ------------------------------ ASMTOOBJ ------------------------------
+	########################################################################
+	#------------------------------ BINTOOBJ ------------------------------#
+	########################################################################
+	def fromBin(self, stream):
+		return stream
+	# ---------------------------- END BINTOOBJ ----------------------------
+
+	########################################################################
+	#------------------------------ ASMTOOBJ ------------------------------#
+	########################################################################
 	def fromAsm(self, head, tail):
 		# ---------------- Primary Proccessing ----------------
 		# proccess head
-		self.operator = getOp(head)
+		self.operator = tableOp(head)
 		if self.operator == {}:
 			raise Exception("no such operation: '" + head + "'")
 
@@ -188,6 +214,11 @@ class Instruction:
 				self.setRegRm(self.operands[0]['data'])
 			# --------------- mem ---------------
 			elif self.operands[0]['type'] == 'mem':
+				# operation size
+				if self.operator['size'] == 0:
+					raise Exception("ambiguous operand size for '" + head + "'")
+				else:
+					self.setRegSize(self.operator['size'])
 				# opCode
 				self.mainOpCode = self.operator['coder'] >> 3
 				self.reg = self.operator['coder'] & 0b111
@@ -195,11 +226,6 @@ class Instruction:
 				self.direction = 0b1
 				# op 0
 				self.setMem(self.operands[0]['data'])
-				# operation size
-				if self.operator['size'] == 0:
-					raise Exception("ambiguous operand size for '" + head + "'")
-				else:
-					self.setRegSize(self.operator['size'])
 			# --------------- imd ---------------
 			elif self.operands[0]['type'] == 'imd':
 				raise Exception("operand type mismatch for '" + head + "'")
@@ -243,15 +269,8 @@ class Instruction:
 					raise Exception("suffix and operand type mistmach for '" + head + "'")
 				size = min(self.operands[0]['data']['size'], bitsLen(self.operands[1]['data']))
 				# opCode
-				# Note: mov operator has alternate encoding
-				if(self.operator['name'] == 'mov'):
-					self.addrMode = False
-					self.moveAlter = True
-					self.mainOpCode = self.operator['codealter']
-					size = max(size, 32)
-				else:
-					self.mainOpCode = self.operator['codei'] >> 3
-					self.reg = self.operator['codei'] & 0b111
+				self.mainOpCode = self.operator['codei'] >> 3
+				self.reg = self.operator['codei'] & 0b111
 				# direction (sign-extended here)
 				if bitsLen(self.operands[1]['data']) == 8 and self.operands[0]['data']['size'] > 8:
 					self.direction = 0b1
@@ -283,18 +302,26 @@ class Instruction:
 				raise Exception("too many memory references for '" + head + "'")
 			# --------------- mem, imd ---------------
 			elif self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'imd':
-				# operation size TODO
-
+				# operation size
+				if self.operator['size'] == 0:
+					raise Exception("ambiguous operand size for '" + head + "'")
+				else:
+					size = self.operator['size']
 				# opCode
-				self.mainOpCode = self.operator['codei'] # TODO
+				self.mainOpCode = self.operator['codei'] >> 3
+				self.reg = self.operator['codei'] & 0b111
 				# addrMode
-				self.addrMode = True # TODO
-				# direction
-				self.direction = 0b1
+				self.addrMode = True
+				# direction (sign-extended here)
+				if bitsLen(self.operands[1]['data']) == 8 and size > 8:
+					self.direction = 0b1
+				else:
+					self.direction = 0b0
 				# op 0
-				# TODO mem
+				self.setMem(self.operands[0]['data'])
 				# op 1
-				# TODO imd
+				self.setImdData(self.operands[1]['data'], min(bitsLen(self.operands[1]['data']), size))
+				self.setRegSize(size)
 			# --------------- imd, reg ---------------
 			# --------------- imd, mem ---------------
 			# --------------- imd, imd ---------------
@@ -302,7 +329,9 @@ class Instruction:
 				raise Exception("operand type mismatch for '" + head + "'")
 	# ---------------------------- END ASMTOOBJ ----------------------------
 
-	# ---------------------------- HELPER FUNCS ----------------------------
+	########################################################################
+	#---------------------------- HELPER FUNCS ----------------------------#
+	########################################################################
 	def setRegReg(self, register):
 		self.reg = register['code']
 		self.setRegSize(register['size'])
@@ -377,15 +406,15 @@ class Instruction:
 		if index != {} and base == {}:
 			fake = True
 			self.mod = 0b00
-			base = registers['ebp']
+			base = tableReg('ebp')
 			self.setDisp(disp, 32)
 			self.setRegSize(index['size'], True)
 		# direct addressing [disp]
 		elif index == {} and base == {}:
 			fake = True
 			self.mod = 0b00
-			base = registers['ebp']
-			index = registers['esp']
+			base = tableReg('ebp')
+			index = tableReg('esp')
 			scale = 1
 			self.setDisp(disp, 32)
 
@@ -411,7 +440,9 @@ class Instruction:
 			if not fake:
 				self.setRegSize(base['size'], True)
 
-	# ---------------------------- ASSEMBLY CODE ---------------------------
+	########################################################################
+	#---------------------------- ASSEMBLY CODE ---------------------------#
+	########################################################################
 	@property
 	def assemblyCode(self):
 		operands = []
@@ -440,7 +471,9 @@ class Instruction:
 				operands.append(hex(operand['data']))
 		return self.operator['name'] + ' ' + ', '.join(operands)
 		
-	# ---------------------------- MACHINE CODE ----------------------------
+	########################################################################
+	#---------------------------- MACHINE CODE ----------------------------#
+	########################################################################
 	@property
 	def machineCode(self):
 		# REX: B from rm

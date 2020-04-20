@@ -3,8 +3,6 @@ import requests
 import sys
 import os
 
-from instruction import Instruction
-
 def testFile(fName, tName, detail = False):
 	try:
 		# read test
@@ -103,7 +101,9 @@ else:
 	print("18.", end = ' ')
 	os.system("python3 testGen.py 18")
 	testFile("testGened.asm", "op (al | ax | eax | rax), imd")
-
+	print("19.", end = ' ')
+	os.system("python3 testGen.py 19")
+	testFile("testGened.asm", "op mem, imd")
 	print("20.", end = ' ')
 	os.system("python3 testGen.py 20")
 	testFile("testGened.asm", "op reg")

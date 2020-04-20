@@ -3,18 +3,12 @@
 # Contains Operator Codes and Register Codes
 
 # ----------------------------------------------- TABLE OF OP-CODES -----------------------------------------------
-# coderr is the OpCode for following situations
-#	op reg, reg
-#	op reg, mem
-#	op mem, reg
-# codei is the OpCode for following situations
-#	op reg, imd
-#	op mem, imd
-# codea is the OpCode for following situations
-#	op  al, imd
-#	op  ax, imd
-#	op eax, imd
-#	op rax, imd
+# coderr is the OpCode for situations
+#	op reg, reg | op reg, mem | op mem, reg
+# codei is the OpCode for situations
+#	op reg, imd | op mem, imd
+# codea is the OpCode for situations
+#	op  al, imd | op  ax, imd | op eax, imd | op rax, imd
 operators = [
 	# binary
 	{"ops": 2, "coder": 0b000000, "codei": 0b100000000, "codea": 0b000001, "name": "add" },
@@ -30,7 +24,7 @@ operators = [
 	{"ops": 1, "coder": 0b111111001, "name": "dec"},
 ]
 
-def getOp(name):
+def tableOp(name):
 	name = name.lower()
 	for op in operators:
 		if name.startswith(op['name']):
@@ -46,74 +40,82 @@ def getOp(name):
 				return {**op, 'size': 64}
 	return {}
 
-registers = {
+# ---------------------------------------------- TABLE OF REGISTERS -----------------------------------------------
+registers = [
 	# 8-bits
-	'al'  : {'size': 8, 'code': 0b0000, "name": "al"  },
-	'cl'  : {'size': 8, 'code': 0b0001, "name": "cl"  },
-	'dl'  : {'size': 8, 'code': 0b0010, "name": "dl"  },
-	'bl'  : {'size': 8, 'code': 0b0011, "name": "bl"  },
-	'ah'  : {'size': 8, 'code': 0b0100, "name": "ah"  },
-	'ch'  : {'size': 8, 'code': 0b0101, "name": "ch"  },
-	'dh'  : {'size': 8, 'code': 0b0110, "name": "dh"  },
-	'bh'  : {'size': 8, 'code': 0b0111, "name": "bh"  },
-	'r8b' : {'size': 8, 'code': 0b1000, "name": "r8b" },
-	'r9b' : {'size': 8, 'code': 0b1001, "name": "r9b" },
-	'r10b': {'size': 8, 'code': 0b1010, "name": "r10b"},
-	'r11b': {'size': 8, 'code': 0b1011, "name": "r11b"},
-	'r12b': {'size': 8, 'code': 0b1100, "name": "r12b"},
-	'r13b': {'size': 8, 'code': 0b1101, "name": "r13b"},
-	'r14b': {'size': 8, 'code': 0b1110, "name": "r14b"},
-	'r15b': {'size': 8, 'code': 0b1111, "name": "r15b"},
+	{'size': 8, 'code': 0b0000, "name": "al"  },
+	{'size': 8, 'code': 0b0001, "name": "cl"  },
+	{'size': 8, 'code': 0b0010, "name": "dl"  },
+	{'size': 8, 'code': 0b0011, "name": "bl"  },
+	{'size': 8, 'code': 0b0100, "name": "ah"  },
+	{'size': 8, 'code': 0b0101, "name": "ch"  },
+	{'size': 8, 'code': 0b0110, "name": "dh"  },
+	{'size': 8, 'code': 0b0111, "name": "bh"  },
+	{'size': 8, 'code': 0b1000, "name": "r8b" },
+	{'size': 8, 'code': 0b1001, "name": "r9b" },
+	{'size': 8, 'code': 0b1010, "name": "r10b"},
+	{'size': 8, 'code': 0b1011, "name": "r11b"},
+	{'size': 8, 'code': 0b1100, "name": "r12b"},
+	{'size': 8, 'code': 0b1101, "name": "r13b"},
+	{'size': 8, 'code': 0b1110, "name": "r14b"},
+	{'size': 8, 'code': 0b1111, "name": "r15b"},
 	# 16-bits
-	'ax'  : {'size': 16, 'code': 0b0000, "name": "ax"  },
-	'cx'  : {'size': 16, 'code': 0b0001, "name": "cx"  },
-	'dx'  : {'size': 16, 'code': 0b0010, "name": "dx"  },
-	'bx'  : {'size': 16, 'code': 0b0011, "name": "bx"  },
-	'sp'  : {'size': 16, 'code': 0b0100, "name": "sp"  },
-	'bp'  : {'size': 16, 'code': 0b0101, "name": "bp"  },
-	'si'  : {'size': 16, 'code': 0b0110, "name": "si"  },
-	'di'  : {'size': 16, 'code': 0b0111, "name": "di"  },
-	'r8w' : {'size': 16, 'code': 0b1000, "name": "r8w" },
-	'r9w' : {'size': 16, 'code': 0b1001, "name": "r9w" },
-	'r10w': {'size': 16, 'code': 0b1010, "name": "r10w"},
-	'r11w': {'size': 16, 'code': 0b1011, "name": "r11w"},
-	'r12w': {'size': 16, 'code': 0b1100, "name": "r12w"},
-	'r13w': {'size': 16, 'code': 0b1101, "name": "r13w"},
-	'r14w': {'size': 16, 'code': 0b1110, "name": "r14w"},
-	'r15w': {'size': 16, 'code': 0b1111, "name": "r15w"},
+	{'size': 16, 'code': 0b0000, "name": "ax"  },
+	{'size': 16, 'code': 0b0001, "name": "cx"  },
+	{'size': 16, 'code': 0b0010, "name": "dx"  },
+	{'size': 16, 'code': 0b0011, "name": "bx"  },
+	{'size': 16, 'code': 0b0100, "name": "sp"  },
+	{'size': 16, 'code': 0b0101, "name": "bp"  },
+	{'size': 16, 'code': 0b0110, "name": "si"  },
+	{'size': 16, 'code': 0b0111, "name": "di"  },
+	{'size': 16, 'code': 0b1000, "name": "r8w" },
+	{'size': 16, 'code': 0b1001, "name": "r9w" },
+	{'size': 16, 'code': 0b1010, "name": "r10w"},
+	{'size': 16, 'code': 0b1011, "name": "r11w"},
+	{'size': 16, 'code': 0b1100, "name": "r12w"},
+	{'size': 16, 'code': 0b1101, "name": "r13w"},
+	{'size': 16, 'code': 0b1110, "name": "r14w"},
+	{'size': 16, 'code': 0b1111, "name": "r15w"},
 	# 32-bits
-	'eax' : {'size': 32, 'code': 0b0000, "name": "eax" },
-	'ecx' : {'size': 32, 'code': 0b0001, "name": "ecx" },
-	'edx' : {'size': 32, 'code': 0b0010, "name": "edx" },
-	'ebx' : {'size': 32, 'code': 0b0011, "name": "ebx" },
-	'esp' : {'size': 32, 'code': 0b0100, "name": "esp" },
-	'ebp' : {'size': 32, 'code': 0b0101, "name": "ebp" },
-	'esi' : {'size': 32, 'code': 0b0110, "name": "esi" },
-	'edi' : {'size': 32, 'code': 0b0111, "name": "edi" },
-	'r8d' : {'size': 32, 'code': 0b1000, "name": "r8d" },
-	'r9d' : {'size': 32, 'code': 0b1001, "name": "r9d" },
-	'r10d': {'size': 32, 'code': 0b1010, "name": "r10d"},
-	'r11d': {'size': 32, 'code': 0b1011, "name": "r11d"},
-	'r12d': {'size': 32, 'code': 0b1100, "name": "r12d"},
-	'r13d': {'size': 32, 'code': 0b1101, "name": "r13d"},
-	'r14d': {'size': 32, 'code': 0b1110, "name": "r14d"},
-	'r15d': {'size': 32, 'code': 0b1111, "name": "r15d"},
+	{'size': 32, 'code': 0b0000, "name": "eax" },
+	{'size': 32, 'code': 0b0001, "name": "ecx" },
+	{'size': 32, 'code': 0b0010, "name": "edx" },
+	{'size': 32, 'code': 0b0011, "name": "ebx" },
+	{'size': 32, 'code': 0b0100, "name": "esp" },
+	{'size': 32, 'code': 0b0101, "name": "ebp" },
+	{'size': 32, 'code': 0b0110, "name": "esi" },
+	{'size': 32, 'code': 0b0111, "name": "edi" },
+	{'size': 32, 'code': 0b1000, "name": "r8d" },
+	{'size': 32, 'code': 0b1001, "name": "r9d" },
+	{'size': 32, 'code': 0b1010, "name": "r10d"},
+	{'size': 32, 'code': 0b1011, "name": "r11d"},
+	{'size': 32, 'code': 0b1100, "name": "r12d"},
+	{'size': 32, 'code': 0b1101, "name": "r13d"},
+	{'size': 32, 'code': 0b1110, "name": "r14d"},
+	{'size': 32, 'code': 0b1111, "name": "r15d"},
 	# 64-bits
-	'rax': {'size': 64, 'code': 0b0000, "name": "rax"},
-	'rcx': {'size': 64, 'code': 0b0001, "name": "rcx"},
-	'rdx': {'size': 64, 'code': 0b0010, "name": "rdx"},
-	'rbx': {'size': 64, 'code': 0b0011, "name": "rbx"},
-	'rsp': {'size': 64, 'code': 0b0100, "name": "rsp"},
-	'rbp': {'size': 64, 'code': 0b0101, "name": "rbp"},
-	'rsi': {'size': 64, 'code': 0b0110, "name": "rsi"},
-	'rdi': {'size': 64, 'code': 0b0111, "name": "rdi"},
-	'r8' : {'size': 64, 'code': 0b1000, "name": "r8" },
-	'r9' : {'size': 64, 'code': 0b1001, "name": "r9" },
-	'r10': {'size': 64, 'code': 0b1010, "name": "r10"},
-	'r11': {'size': 64, 'code': 0b1011, "name": "r11"},
-	'r12': {'size': 64, 'code': 0b1100, "name": "r12"},
-	'r13': {'size': 64, 'code': 0b1101, "name": "r13"},
-	'r14': {'size': 64, 'code': 0b1110, "name": "r14"},
-	'r15': {'size': 64, 'code': 0b1111, "name": "r15"},
-}
+	{'size': 64, 'code': 0b0000, "name": "rax"},
+	{'size': 64, 'code': 0b0001, "name": "rcx"},
+	{'size': 64, 'code': 0b0010, "name": "rdx"},
+	{'size': 64, 'code': 0b0011, "name": "rbx"},
+	{'size': 64, 'code': 0b0100, "name": "rsp"},
+	{'size': 64, 'code': 0b0101, "name": "rbp"},
+	{'size': 64, 'code': 0b0110, "name": "rsi"},
+	{'size': 64, 'code': 0b0111, "name": "rdi"},
+	{'size': 64, 'code': 0b1000, "name": "r8" },
+	{'size': 64, 'code': 0b1001, "name": "r9" },
+	{'size': 64, 'code': 0b1010, "name": "r10"},
+	{'size': 64, 'code': 0b1011, "name": "r11"},
+	{'size': 64, 'code': 0b1100, "name": "r12"},
+	{'size': 64, 'code': 0b1101, "name": "r13"},
+	{'size': 64, 'code': 0b1110, "name": "r14"},
+	{'size': 64, 'code': 0b1111, "name": "r15"},
+]
+
+def tableReg(name):
+	name = name.lower()
+	for reg in registers:
+		if name == reg['name']:
+			return reg
+	return {}
 

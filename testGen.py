@@ -464,7 +464,14 @@ for op in binO:
 		f.write(op + ' rax, 0x1377\n')
 	# op mem, imd
 	if case < 0 or case == 19:
-		f.write(op + ' al, al\n')
+		f.write(op + 'b [2 * rax], 0 + 127\n')
+		f.write(op + 'w [eax], 0 + 128\n')
+		f.write(op + 'q [2 * eax], 0 - 128\n')
+		f.write(op + 'd [r8], 0 - 127\n')
+		f.write(op + 'b [r8d], 0\n')
+		f.write(op + 'w [0x99], 0 + 127\n')
+		f.write(op + 'q [r12], 0 + 128\n')
+		f.write(op + 'b [r8d], 32 * 32 * 32\n')
 
 f.close()
 
