@@ -7,9 +7,13 @@ else:
 
 f = open("testGened.asm", "w")
 
-nBinO = [
+unO = [
+	"dec",
+	"inc",
+]
+
+binO = [
 	"add",
-	"mov",
 	"adc",
 	"sub",
 	"sbb",
@@ -17,10 +21,39 @@ nBinO = [
 	"or",
 	"xor",
 	"cmp",
-	"test",
 ]
 
-for op in nBinO:
+for op in unO:
+	# op reg
+	if case < 0 or case == 20:
+		f.write(op + ' al\n')
+		f.write(op + ' ah\n')
+		f.write(op + ' ax\n')
+		f.write(op + ' eax\n')
+		f.write(op + ' rax\n')
+		f.write(op + ' r8\n')
+		f.write(op + ' r8d\n')
+		f.write(op + ' r8w\n')
+		f.write(op + ' bl\n')
+		f.write(op + ' bh\n')
+		f.write(op + ' bx\n')
+		f.write(op + ' ebx\n')
+		f.write(op + ' rbx\n')
+		f.write(op + ' r9\n')
+		f.write(op + ' r9d\n')
+		f.write(op + ' r9w\n')
+	# op mem
+	if case < 0 or case == 21:
+		f.write(op + 'b [r13d + 0x99 + 2 * 4 * r12d]\n')
+		f.write(op + 'b [r8d + 0b1010 - 0xA + r12d]\n')
+		f.write(op + 'w [r8 + r12 + 0xDAF]\n')
+		f.write(op + 'w [r13d + 0b00111 * 3 - 2 + r8d]\n')
+		f.write(op + 'd [rax + rbp + 0xDAF]\n')
+		f.write(op + 'd [rsp + 0b00111 * 3 - 2 + rax]\n')
+		f.write(op + 'q [r12 + 42 + 0x42 + r13]\n')
+		f.write(op + 'q [r8d + 8 * r8d + 0b1001]\n')
+
+for op in binO:
 	# ---------------------------------- op reg, reg ----------------------------------
 	if case < 0 or case == 0:
 		f.write(op + ' al, al\n')
@@ -401,14 +434,36 @@ for op in nBinO:
 		f.write(op + ' [r8d + 8 * r8d + 0b1001], r11w\n')
 
 	# ---------------------------------- op reg, imd ----------------------------------
-	# op normal reg, imd
-	if case < 0 or case == 15:
-		f.write(op + ' al, al\n')
-	# op al ax eax, imd
-	if case < 0 or case == 16:
-		f.write(op + ' al, al\n')
-	# op mem, imd
+	# op reg, imd
 	if case < 0 or case == 17:
+		f.write(op + ' ebx, 8 * 42 + 0b1001 - 0x13771999\n')
+		f.write(op + ' rbx, 8 * 42 + 0b1001 - 0x13771999\n')
+		f.write(op + ' rbx, 0 - 0x13771999\n')
+		f.write(op + ' r12, 0 + 0x13771999\n')
+		f.write(op + ' r8d, 8 * 7 + 0x13771999\n')
+		f.write(op + ' r8b, 0 - 128\n')
+		f.write(op + ' r8b, 0 - 127\n')
+		f.write(op + ' r8b, 0\n')
+		f.write(op + ' r8b, 0 + 127\n')
+		f.write(op + ' r8b, 0 + 128\n')
+		f.write(op + ' r8w, 0 - 128\n')
+		f.write(op + ' r8w, 0 - 127\n')
+		f.write(op + ' r8w, 0\n')
+		f.write(op + ' r8w, 0 + 127\n')
+		f.write(op + ' r8w, 0 + 128\n')
+		f.write(op + ' r8, 0 - 128\n')
+		f.write(op + ' r8, 0 - 127\n')
+		f.write(op + ' r8, 0\n')
+		f.write(op + ' r8, 0 + 127\n')
+		f.write(op + ' r8, 0 + 128\n')
+	# op (al | ax | eax | rax), imd
+	if case < 0 or case == 18:
+		f.write(op + ' al, 0x1377\n')
+		f.write(op + ' ax, 0x1377\n')
+		f.write(op + ' eax, 0x1377\n')
+		f.write(op + ' rax, 0x1377\n')
+	# op mem, imd
+	if case < 0 or case == 19:
 		f.write(op + ' al, al\n')
 
 f.close()

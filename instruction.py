@@ -6,6 +6,15 @@ from tables import *
 from eval import evaluate
 
 # ------------------------------------------------ HELPER FUNCS ------------------------------------------------
+def bitsLen(num):
+	if -2**7 <= num < 2**7:
+		return 8
+	elif -2**31 <= num < 2**31:
+		return 32
+	elif -2**63 <= num < 2**63:
+		return 64
+	else:
+		return -1
 def operand(op):
 	# Check if memory addressing
 	op = op.strip()
@@ -147,42 +156,62 @@ class Instruction:
 	# ------------------------------ ASMTOOBJ ------------------------------
 	def fromAsm(self, head, tail):
 		# ---------------- Primary Proccessing ----------------
-		raw = head + tail
-		
-		# Unknown Operation
-		if not head in opCodes:
-			raise Exception("no such instruction: '" + raw + "'")
+		# proccess head
+		self.operator = getOp(head)
+		if self.operator == {}:
+			raise Exception("no such operation: '" + head + "'")
 
-		# Proccess head and tail
-		self.operator = opCodes[head]
+		# proccess head tail
 		self.operands = tail.split(',')
 		if self.operands == ['']:
 			self.operands = []
 		self.operands = list(map(operand, self.operands))
 
-		# Number mismatch
+		# head and tail mismatch
 		if len(self.operands) != self.operator["ops"]:
 			raise Exception("number of operands mismatch for '" + head + "'")
 
 		# --------------- Secondary Proccessing ---------------
 		# Unary Operator
 		if self.operator["ops"] == 1:
-			self.operator["ops"] = 1 # TODO
+			# --------------- reg ---------------
+			if self.operands[0]['type'] == 'reg':
+				# operation size
+				if self.operator['size'] != 0 and self.operator['size'] != self.operands[0]['data']['size']:
+					raise Exception("suffix and operand type mistmach for '" + head + "'")
+				# opCode
+				self.mainOpCode = self.operator['coder'] >> 3
+				self.reg = self.operator['coder'] & 0b111
+				# direction
+				self.direction = 0b1
+				# op 0
+				self.setRegRm(self.operands[0]['data'])
+			# --------------- mem ---------------
+			elif self.operands[0]['type'] == 'mem':
+				# opCode
+				self.mainOpCode = self.operator['coder'] >> 3
+				self.reg = self.operator['coder'] & 0b111
+				# direction
+				self.direction = 0b1
+				# op 0
+				self.setMem(self.operands[0]['data'])
+				# operation size
+				if self.operator['size'] == 0:
+					raise Exception("ambiguous operand size for '" + head + "'")
+				else:
+					self.setRegSize(self.operator['size'])
+			# --------------- imd ---------------
+			elif self.operands[0]['type'] == 'imd':
+				raise Exception("operand type mismatch for '" + head + "'")
 		# Binary Operator
 		elif self.operator["ops"] == 2:
-			##########################################
-			# -------- handling special cases --------
-			if(self.operator['name'] == 'test' and self.operands[1]['type'] == 'mem'):
-				tmp = self.operands[0]
-				self.operands[0] = self.operands[1]
-				self.operands[1] = tmp
-
-			##########################################
 			# --------------- reg, reg ---------------
 			if self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'reg':
-				# same size condition
+				# operation size
 				if self.operands[0]['data']['size'] != self.operands[1]['data']['size']:
 					raise Exception("operand type mismatch for '" + head + "'")
+				if self.operator['size'] != 0 and self.operator['size'] != self.operands[0]['data']['size']:
+					raise Exception("suffix and operand type mistmach for '" + head + "'")
 				# opCode
 				self.mainOpCode = self.operator['coder']
 				# direction
@@ -196,6 +225,9 @@ class Instruction:
 					self.prefix = self.prefix[0:1]
 			# --------------- reg, mem ---------------
 			elif self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'mem':
+				# operation size
+				if self.operator['size'] != 0 and self.operator['size'] != self.operands[0]['data']['size']:
+					raise Exception("suffix and operand type mistmach for '" + head + "'")
 				# opCode
 				self.mainOpCode = self.operator['coder']
 				# direction
@@ -206,23 +238,38 @@ class Instruction:
 				self.setMem(self.operands[1]['data'])
 			# --------------- reg, imd ---------------
 			elif self.operands[0]['type'] == 'reg' and self.operands[1]['type'] == 'imd':
+				# operation size
+				if self.operator['size'] != 0 and self.operator['size'] != self.operands[0]['data']['size']:
+					raise Exception("suffix and operand type mistmach for '" + head + "'")
+				size = min(self.operands[0]['data']['size'], bitsLen(self.operands[1]['data']))
 				# opCode
 				# Note: mov operator has alternate encoding
 				if(self.operator['name'] == 'mov'):
 					self.addrMode = False
 					self.moveAlter = True
-					self.mainOpCode = self.operator['codei']
+					self.mainOpCode = self.operator['codealter']
+					size = max(size, 32)
 				else:
 					self.mainOpCode = self.operator['codei'] >> 3
 					self.reg = self.operator['codei'] & 0b111
 				# direction (sign-extended here)
-				self.direction = 0b0
+				if bitsLen(self.operands[1]['data']) == 8 and self.operands[0]['data']['size'] > 8:
+					self.direction = 0b1
+				else:
+					self.direction = 0b0
 				# op 0
 				self.setRegRm(self.operands[0]['data'])
 				# op 1
-				self.setImdData(self.operands[1]['data'], self.operands[0]['data']['size'])
+				self.setImdData(self.operands[1]['data'], size)
+				# special case for al, ax, eax, rax (code = 0b0000)
+				if self.operands[0]['data']['code'] == 0b0000:
+					self.addrMode = False
+					self.mainOpCode = self.operator['codea']
 			# --------------- mem, reg ---------------
 			elif self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'reg':
+				# operation size
+				if self.operator['size'] != 0 and self.operator['size'] != self.operands[1]['data']['size']:
+					raise Exception("suffix and operand type mistmach for '" + head + "'")
 				# opCode
 				self.mainOpCode = self.operator['coder']
 				# direction
@@ -236,6 +283,8 @@ class Instruction:
 				raise Exception("too many memory references for '" + head + "'")
 			# --------------- mem, imd ---------------
 			elif self.operands[0]['type'] == 'mem' and self.operands[1]['type'] == 'imd':
+				# operation size TODO
+
 				# opCode
 				self.mainOpCode = self.operator['codei'] # TODO
 				# addrMode
@@ -302,10 +351,10 @@ class Instruction:
 		# taking care of displacement
 		if disp == 0 and (base == {} or base['code'] & 0b111 != 0b101):
 			self.mod = 0b00
-		elif disp.bit_length() <= 7:
+		elif bitsLen(disp) == 8:
 			self.mod = 0b01
 			self.setDisp(disp, 8)
-		elif disp.bit_length() <= 31:
+		elif bitsLen(disp) == 32:
 			self.mod = 0b10
 			self.setDisp(disp, 32)
 		else:
@@ -441,6 +490,7 @@ class Instruction:
 			addrMode = [ (self.mod << 6) | (self.reg << 3) | (self.rm) ]
 		else:
 			addrMode = []
+
 		return \
 			self.prefix + \
 			rex + \

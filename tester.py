@@ -97,7 +97,19 @@ else:
 	print("16.", end = ' ')
 	os.system("python3 testGen.py 16")
 	testFile("testGened.asm", "op [base + scale * index + disp], reg (64-bits)")
+	print("17.", end = ' ')
+	os.system("python3 testGen.py 17")
+	testFile("testGened.asm", "op reg, imd")
+	print("18.", end = ' ')
+	os.system("python3 testGen.py 18")
+	testFile("testGened.asm", "op (al | ax | eax | rax), imd")
 
+	print("20.", end = ' ')
+	os.system("python3 testGen.py 20")
+	testFile("testGened.asm", "op reg")
+	print("21.", end = ' ')
+	os.system("python3 testGen.py 21")
+	testFile("testGened.asm", "op mem")
 
 
 

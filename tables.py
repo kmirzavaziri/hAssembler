@@ -14,33 +14,56 @@
 #	op  al, imd
 #	op  ax, imd
 #	op eax, imd
-#	op rax, imd TODO
-opCodes = {
-	# normal binary
-	"add" : {"ops": 2, "coder": 0b000000, "codei": 0b100000000, "codea": 0b000001, "name": "add" },
-	"or"  : {"ops": 2, "coder": 0b000010, "codei": 0b100000001, "codea": 0b000011, "name": "or"  },
-	"adc" : {"ops": 2, "coder": 0b000100, "codei": 0b100000010, "codea": 0b000101, "name": "adc" },
-	"sbb" : {"ops": 2, "coder": 0b000110, "codei": 0b100000011, "codea": 0b000111, "name": "sbb" },
-	"and" : {"ops": 2, "coder": 0b001000, "codei": 0b100000100, "codea": 0b001001, "name": "and" },
-	"sub" : {"ops": 2, "coder": 0b001010, "codei": 0b100000101, "codea": 0b001011, "name": "sub" },
-	"xor" : {"ops": 2, "coder": 0b001100, "codei": 0b100000110, "codea": 0b001101, "name": "xor" },
-	"cmp" : {"ops": 2, "coder": 0b001110, "codei": 0b100000111, "codea": 0b001111, "name": "cmp" },
-	"test": {"ops": 2, "coder": 0b100001, "codei": 0b111101000, "codea": 0b101010, "name": "test"},
-	"mov" : {"ops": 2, "coder": 0b100010, "codei": 0b1011     , "codea": 0b101100, "name": "mov" }, # mov alternate encoding
+#	op rax, imd
+operators = [
+	# binary
+	{"ops": 2, "coder": 0b000000, "codei": 0b100000000, "codea": 0b000001, "name": "add" },
+	{"ops": 2, "coder": 0b000010, "codei": 0b100000001, "codea": 0b000011, "name": "or"  },
+	{"ops": 2, "coder": 0b000100, "codei": 0b100000010, "codea": 0b000101, "name": "adc" },
+	{"ops": 2, "coder": 0b000110, "codei": 0b100000011, "codea": 0b000111, "name": "sbb" },
+	{"ops": 2, "coder": 0b001000, "codei": 0b100000100, "codea": 0b001001, "name": "and" },
+	{"ops": 2, "coder": 0b001010, "codei": 0b100000101, "codea": 0b001011, "name": "sub" },
+	{"ops": 2, "coder": 0b001100, "codei": 0b100000110, "codea": 0b001101, "name": "xor" },
+	{"ops": 2, "coder": 0b001110, "codei": 0b100000111, "codea": 0b001111, "name": "cmp" },
+	# unary
+	{"ops": 1, "coder": 0b111111000, "name": "inc"},
+	{"ops": 1, "coder": 0b111111001, "name": "dec"},
+]
 
-	# dec inc xchg xadd imul idiv bsf bsr stc clc std cld jmp jcc jcxz jecxz loop loope loopne shl shr neg not call ret syscall TODO
-}
+def getOp(name):
+	name = name.lower()
+	for op in operators:
+		if name.startswith(op['name']):
+			if name[len(op['name']):] == '':
+				return {**op, 'size': 0}
+			if name[len(op['name']):] == 'b':
+				return {**op, 'size': 8}
+			elif name[len(op['name']):] == 'w':
+				return {**op, 'size': 16}
+			elif name[len(op['name']):] == 'd':
+				return {**op, 'size': 32}
+			elif name[len(op['name']):] == 'q':
+				return {**op, 'size': 64}
+	return {}
 
 registers = {
 	# 8-bits
-	'al': {'size': 8, 'code': 0b0000, "name": "al"},
-	'cl': {'size': 8, 'code': 0b0001, "name": "cl"},
-	'dl': {'size': 8, 'code': 0b0010, "name": "dl"},
-	'bl': {'size': 8, 'code': 0b0011, "name": "bl"},
-	'ah': {'size': 8, 'code': 0b0100, "name": "ah"},
-	'ch': {'size': 8, 'code': 0b0101, "name": "ch"},
-	'dh': {'size': 8, 'code': 0b0110, "name": "dh"},
-	'bh': {'size': 8, 'code': 0b0111, "name": "bh"},
+	'al'  : {'size': 8, 'code': 0b0000, "name": "al"  },
+	'cl'  : {'size': 8, 'code': 0b0001, "name": "cl"  },
+	'dl'  : {'size': 8, 'code': 0b0010, "name": "dl"  },
+	'bl'  : {'size': 8, 'code': 0b0011, "name": "bl"  },
+	'ah'  : {'size': 8, 'code': 0b0100, "name": "ah"  },
+	'ch'  : {'size': 8, 'code': 0b0101, "name": "ch"  },
+	'dh'  : {'size': 8, 'code': 0b0110, "name": "dh"  },
+	'bh'  : {'size': 8, 'code': 0b0111, "name": "bh"  },
+	'r8b' : {'size': 8, 'code': 0b1000, "name": "r8b" },
+	'r9b' : {'size': 8, 'code': 0b1001, "name": "r9b" },
+	'r10b': {'size': 8, 'code': 0b1010, "name": "r10b"},
+	'r11b': {'size': 8, 'code': 0b1011, "name": "r11b"},
+	'r12b': {'size': 8, 'code': 0b1100, "name": "r12b"},
+	'r13b': {'size': 8, 'code': 0b1101, "name": "r13b"},
+	'r14b': {'size': 8, 'code': 0b1110, "name": "r14b"},
+	'r15b': {'size': 8, 'code': 0b1111, "name": "r15b"},
 	# 16-bits
 	'ax'  : {'size': 16, 'code': 0b0000, "name": "ax"  },
 	'cx'  : {'size': 16, 'code': 0b0001, "name": "cx"  },
