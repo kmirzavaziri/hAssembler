@@ -1,5 +1,5 @@
 # Assembler & DisAssembler
-x64 Intel Instruction Assembler and DisAssembler written in Python 3. See [Online GCC version](https://defuse.ca/online-x86-assembler.htm) as a refrence. The operators which this tool can assemble/disassemble are limited to
+x64 Intel Instruction Assembler and DisAssembler written in Python 3. See [Online GCC version](https://defuse.ca/online-x86-assembler.htm) as a refrence. The operators this tool can assemble/disassemble are limited to
 
 - Binary Operators: `add`, `or`, `adc`, `sbb`, `and`, `sub`, `xor`, and `cmp` 
 - Unary Operators: `inc` and `dec` 
