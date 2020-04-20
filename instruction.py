@@ -122,46 +122,45 @@ def operand(op):
 #---------------------------------------------- INSTRUCTION CLASS ---------------------------------------------#
 ################################################################################################################
 class Instruction:
+	def __init__(self):
 	########################################################################
 	#------------------------- Assembly Code Data -------------------------#
 	########################################################################
-	operator = {}
-	operands = []
+		self.operator = {}
+		self.operands = []
 
 	########################################################################
 	#------------------------- Machine Code Data --------------------------#
 	########################################################################
-	# Prefix: 0-4 B
-	prefix = []
-	# REX: 0-1 B ?= 2 b + 3 b + 3 b
-	# (if [rex] then we have REX byte, else we don't)
-	rex = False
-	rexW = 0b0
-	rexR = 0b0
-	rexX = 0b0
-	rexB = 0b0
-	# OpCode: 1 B = 6 b + 1 b + 1 b
-	# Note: if not [moveAlter] then OpCode (1 B) = mainOpCode (4 b) + W (1 b) + reg (3 b)
-	moveAlter = False
-	mainOpCode = 0b000000
-	direction = 0b0
-	w = 0b0
-	# AddrMode: 0-1 B ?= 2 b + 3 b + 3 b
-	# (if [addrMode] then we have AddrMode byte, else we don't)
-	addrMode = True
-	mod = 0b00
-	reg = 0b000
-	rm = 0b000
-	# SIB: 0-1 B ?= 2 b + 3 b + 3 b
-	# (if [sib] then we have SIB byte, else we don't)
-	sib = False
-	scale = 0b00
-	index = 0b000
-	base = 0b000
-	# Displacement: 0-4 B
-	disp = []
-	# Data: 0-8 B
-	data = []
+		# Prefix: 0-4 B
+		self.prefix = []
+		# REX: 0-1 B ?= 2 b + 3 b + 3 b
+		# (if [rex] then we have REX byte, else we don't)
+		self.rex = False
+		self.rexW = 0b0
+		self.rexR = 0b0
+		self.rexX = 0b0
+		self.rexB = 0b0
+		# OpCode: 1 B = 6 b + 1 b + 1 b
+		self.mainOpCode = 0b000000
+		self.direction = 0b0
+		self.w = 0b0
+		# AddrMode: 0-1 B ?= 2 b + 3 b + 3 b
+		# (if [addrMode] then we have AddrMode byte, else we don't)
+		self.addrMode = True
+		self.mod = 0b00
+		self.reg = 0b000
+		self.rm = 0b000
+		# SIB: 0-1 B ?= 2 b + 3 b + 3 b
+		# (if [sib] then we have SIB byte, else we don't)
+		self.sib = False
+		self.scale = 0b00
+		self.index = 0b000
+		self.base = 0b000
+		# Displacement: 0-4 B
+		self.disp = []
+		# Data: 0-8 B
+		self.data = []
 
 	########################################################################
 	#--------------------------- TO-STRING FUNC ---------------------------#
@@ -174,7 +173,112 @@ class Instruction:
 	#------------------------------ BINTOOBJ ------------------------------#
 	########################################################################
 	def fromBin(self, stream):
-		return stream # TODO
+		dataSize = 0
+		dispSize = 0
+		# read prefixes
+		while stream != [] and (stream[0] >> 4) == 0b0110:
+			self.prefix += [stream[0]]
+			stream = stream[1:]
+
+		if len(self.prefix) > 4:
+			raise Exception("more than 4 bytes prefix")
+
+		# read possible REX
+		rex = []
+		while stream != [] and stream[0] >> 4 == 0b0100:
+			rex += [stream[0]]
+			stream = stream[1:]
+
+		if len(rex) > 1:
+			raise Exception("more than 1 byte REX")
+
+		if rex != []:
+			self.rex = True
+			self.rexW = (rex[0] >> 3) & 0b1
+			self.rexR = (rex[0] >> 2) & 0b1
+			self.rexX = (rex[0] >> 1) & 0b1
+			self.rexB = (rex[0] >> 0) & 0b1
+
+		# read opCode
+		if stream == []:
+			raise Exception("OpCode not found")
+		
+		opCode = stream[0]
+		stream = stream[1:]
+		
+		self.mainOpCode = opCode >> 2
+		self.direction = (opCode >> 1) & 0b1
+		self.w = (opCode >> 0) & 0b1
+
+		self.operator = tableOpByCode(self.mainOpCode)
+		if self.operator == {}:
+			raise Exception("unknow OpCode")
+
+		# proccess opCode - may figure out the operation
+		opType = 'r'
+		if self.operator['codea'] == self.mainOpCode:
+			opType = 'a'
+			self.addrMode = False
+			size = self.getRegSize()
+			self.operands = [{}]
+			self.operands[0] = operand(tableRegisterByCodeSize(0b0000, size)['name'])
+			dataSize = 1 # TODO
+
+		# read possible AddrMode
+		if self.addrMode:
+			if stream == []:
+				raise Exception("AddrMode not found")
+			addrMode = stream[0]
+			stream = stream[1:]
+			
+			self.mod = addrMode >> 6
+			self.reg = (addrMode >> 3) & 0b111
+			self.rm  = (addrMode >> 0) & 0b111
+
+			# figure out the operation (or already figured out)
+			if self.operator['ops'] == 1 or self.operator['codei'] >> 3 == self.mainOpCode:
+				opType = 'i'
+				self.operator = tableOpByCodeI(self.mainOpCode << 3 | self.reg)
+				if self.operator == {}:
+					raise Exception("unknow OpCode")
+				
+			# mod case analysis
+			if self.mod == 0b11:
+				self.operands = [{}]
+				self.operands[0] = operand(self.getRegRm()['name'])
+				self.sib = False
+				if self.operator['ops'] > 1:
+					if opType == 'r':
+						self.operands += [{}]
+						self.operands[1] = operand(self.getRegReg()['name'])
+					elif opType == 'i':
+						opType = 'i' # TODO
+		# read possible SIB
+		if self.sib:
+			if stream == []:
+				raise Exception("SIB not found")
+			sib = stream[0]
+			stream = stream[1:]
+			
+			self.scale = sib >> 6
+			self.index = (sib >> 3) & 0b111
+			self.base  = (sib >> 0) & 0b111
+
+		# read possible disp
+		if len(stream) < dispSize:
+			raise Exception("displacement not found")
+		self.disp = stream[0:dispSize]
+		stream = stream[dispSize:]
+
+		# read possible data
+		if len(stream) < dataSize:
+			raise Exception("data not found")
+		self.data = stream[0:dataSize]
+		stream = stream[dataSize:]
+		
+		return stream
+
+
 	# ---------------------------- END BINTOOBJ ----------------------------
 
 	########################################################################
@@ -310,8 +414,6 @@ class Instruction:
 				# opCode
 				self.mainOpCode = self.operator['codei'] >> 3
 				self.reg = self.operator['codei'] & 0b111
-				# addrMode
-				self.addrMode = True
 				# direction (sign-extended here)
 				if bitsLen(self.operands[1]['data']) == 8 and size > 8:
 					self.direction = 0b1
@@ -336,11 +438,27 @@ class Instruction:
 		self.reg = register['code']
 		self.setRegSize(register['size'])
 
+	def getRegReg(self):
+		code = self.rexR << 3 | self.reg
+		size = self.getRegSize()
+		reg = tableRegByCodeSize(code, size)
+		if reg == {}:
+			raise Exception("unknown register with code '" + code + "' and size " + size)
+		return reg
+
 	def setRegRm(self, register):
 		self.mod = 0b11
 		self.rm = register['code']
 		self.setRegSize(register['size'])
 
+	def getRegRm(self):
+		code = self.rexB << 3 | self.rm
+		size = self.getRegSize()
+		reg = tableRegByCodeSize(code, size)
+		if reg == {}:
+			raise Exception("unknown register with code '" + code + "' and size " + size)
+		return reg
+		
 	def setRegSize(self, size, isAddress = False):
 		if not isAddress:
 			if size == 8:
@@ -357,6 +475,25 @@ class Instruction:
 		else:
 			if size == 32:
 				self.prefix = [0x67] + self.prefix
+
+	def getRegSize(self, isAddress = False):
+		if not isAddress:
+			if self.rexW == 0b0 and self.w == 0b0 and not 0x66 in self.prefix:
+				return 8
+			elif self.rexW == 0b0 and self.w == 0b1 and 0x66 in self.prefix:
+				return 16
+			elif self.rexW == 0b0 and self.w == 0b1 and not 0x66 in self.prefix:
+				return 32
+			elif self.rexW == 0b1 and self.w == 0b1 and not 0x66 in self.prefix:
+				return 64
+			else:
+				raise Exception("inconsistent code")
+				
+		else:
+			if 0x67 in self.prefix:
+				return 32
+			else:
+				return 64
 
 	def setImdData(self, val, size):
 		self.data = [0x00] * (size // 8)
@@ -512,11 +649,7 @@ class Instruction:
 		else:
 			sib = []
 
-		opCode = []
-		if self.moveAlter:
-			opCode = [ (self.mainOpCode << 4) | (self.w << 3) | (self.rm) ]
-		else:
-			opCode = [ (self.mainOpCode << 2) | (self.direction << 1) | (self.w) ]
+		opCode = [ (self.mainOpCode << 2) | (self.direction << 1) | (self.w) ]
 
 		addrMode = []
 		if self.addrMode:

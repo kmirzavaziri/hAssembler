@@ -24,6 +24,8 @@ python3 hAssembler.py foo.asm --raw
 
 ## Running the tests
 
+### Assembler
+
 To compare this python assembler with this [Online Assembler](https://defuse.ca/online-x86-assembler.htm) use
 
 ```
@@ -49,6 +51,28 @@ python3 testGen.py
 ```
 
 without specifying any test-case id.
+
+### DisAssembler
+
+To compare this DisAssembler with the online version you will need a binary file, you may assemble an assembly text file i.e., `foo.asm` into it's equivalent binary machine code `foo.bin` using this command
+
+```
+python3 disTestGen.py foo.asm
+```
+
+This command uses our Assembler as a core to assemble the assembly file. Once you had the `.bin` file prepared, use
+
+```
+python3 disTester.py foo.bin
+```
+
+This command first disassembles and then assembles the result of DisAssembler and compare the machine codes. For testing all test cases similar to what `tester.py` does for the Assembler use
+
+```
+python3 disTester.py
+```
+
+without specifying any file name.
 
 ## License
 

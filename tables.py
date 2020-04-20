@@ -40,6 +40,21 @@ def tableOp(name):
 				return {**op, 'size': 64}
 	return {}
 
+def tableOpByCode(code):
+	for op in operators:
+		if code == op['coder']:
+			return op
+		if code == op['codei'] >> 3:
+			return op
+		if code == op['codea']:
+			return op
+	return {}
+def tableOpByCodIe(code):
+	for op in operators:
+		if code == op['codei']:
+			return op
+	return {}
+
 # ---------------------------------------------- TABLE OF REGISTERS -----------------------------------------------
 registers = [
 	# 8-bits
@@ -116,6 +131,12 @@ def tableReg(name):
 	name = name.lower()
 	for reg in registers:
 		if name == reg['name']:
+			return reg
+	return {}
+
+def tableRegByCodeSize(code, size):
+	for reg in registers:
+		if code == reg['code'] and size == reg['size']:
 			return reg
 	return {}
 
