@@ -41,7 +41,7 @@ If no file is specified, i. e.,
 python3 tester.py
 ```
 
-it will generate a complete set of tests and compare this python code with the online refrence for all tests. If you want to see the generated tests, use
+It will generate a complete set of tests and compare this python code with the online refrence for all tests. If you want to see the generated tests, use
 
 ```
 python3 testGen.py {id}
