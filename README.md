@@ -41,13 +41,13 @@ If no file is specified, i. e.,
 python3 tester.py
 ```
 
-It will generate a complete set of tests and compare this python code with the online refrence for all tests. If you want to see the generated tests, use
+it will generate a complete set of tests and compare this python code with the online refrence for all tests. If you want to see the generated tests, use
 
 ```
 python3 testGen.py {id}
 ```
 
-where `{id}` is a number in `range(18)`, specifying the test-case id. Once you executed the command, the result is available in `testGened.asm`. For generating all test-cases at once, use
+where `{id}` is a number in `range(18)`, specifying the test-case id. Once you executed the command, the result is available in `testGened.asm` file. For generating all test-cases at once, use
 
 ```
 python3 testGen.py
