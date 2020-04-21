@@ -1,6 +1,6 @@
 # Instruction Class
 # by Kamyar Mirzavaziri
-# Contains a class called Instruction which stores all datas of a single instruction and can return it in both assembly and machine language
+# Contains a class called Instruction which stores all data of a single instruction and can return it in both assembly and machine language
 
 from tables import *
 from eval import evaluate
@@ -175,6 +175,12 @@ class Instruction:
 	def fromBin(self, stream):
 		dataSize = 0
 		dispSize = 0
+
+		memory = False
+		memType = '' # can be b, s, bs, or n while b means base or base + disp, etc. (n means only disp) 
+		scale = 1
+		index = {}
+		base = {}
 		# read prefixes
 		while stream != [] and (stream[0] >> 4) == 0b0110:
 			self.prefix += [stream[0]]
@@ -216,12 +222,13 @@ class Instruction:
 
 		# proccess opCode - may figure out the operation
 		opType = 'r'
+		# [op areg, imd]
 		if self.operator['codea'] == self.mainOpCode:
 			opType = 'a'
 			self.addrMode = False
 			size = self.getRegSize()
 			self.operands = [{}]
-			self.operands[0] = operand(tableRegisterByCodeSize(0b0000, size)['name'])
+			self.operands[0] = operand(tableRegByCodeSize(0b0000, size)['name'])
 			dataSize = 1 # TODO
 
 		# read possible AddrMode
@@ -241,18 +248,46 @@ class Instruction:
 				self.operator = tableOpByCodeI(self.mainOpCode << 3 | self.reg)
 				if self.operator == {}:
 					raise Exception("unknow OpCode")
-				
-			# mod case analysis
+			
+			# proccess mod - case analysis
+			# [op reg] | [op reg, reg] | [op reg, imd]
 			if self.mod == 0b11:
+				# [op reg]
 				self.operands = [{}]
 				self.operands[0] = operand(self.getRegRm()['name'])
-				self.sib = False
 				if self.operator['ops'] > 1:
+					# [op reg, reg]
 					if opType == 'r':
 						self.operands += [{}]
 						self.operands[1] = operand(self.getRegReg()['name'])
+					# [op reg, imd]
 					elif opType == 'i':
 						opType = 'i' # TODO
+			# [op mem] | [op reg, mem] | [op mem, reg] | [op mem, imd]
+			else:
+				memory = True
+				if self.mod == 0b00:
+					dispSize = 0
+				elif self.mod == 0b01:
+					dispSize = 1
+				elif self.mod == 0b10:
+					dispSize = 4
+
+				# proccess reg
+				if self.operator['ops'] > 1:
+					self.operands = [{}]
+					self.operands[0] = operand(self.getRegReg()['name'])
+
+				# proccess rm - case analysis
+				# cases: s, d, bs, sd, bsd
+				if self.rm == 0b100:
+					self.sib = True
+				# cases: b, bd
+				else:
+					self.base = self.rm
+					base = self.getRegBase()
+					memType = 'b'
+
 		# read possible SIB
 		if self.sib:
 			if stream == []:
@@ -261,14 +296,65 @@ class Instruction:
 			stream = stream[1:]
 			
 			self.scale = sib >> 6
+			scale = 2**self.scale
+
 			self.index = (sib >> 3) & 0b111
+			index = self.getRegIndex()
+			
 			self.base  = (sib >> 0) & 0b111
+			base = self.getRegBase()
+
+			# proccess base and index
+			# special case: esp as base
+			if self.scale == 0b00 and self.index == 0b100 and self.base == 0b100:
+				memType = 'b'
+			# case: d
+			elif self.scale == 0b00 and self.index == 0b100 and self.base == 0b101:
+				memType = 'n'
+			# case: s, sd
+			elif self.mod == 0b00 and self.base == 0b101:
+				memType = 's'
+				dispSize = 4
+			# case: bs, bsd
+			else:
+				memType = 'bs'
 
 		# read possible disp
 		if len(stream) < dispSize:
 			raise Exception("displacement not found")
 		self.disp = stream[0:dispSize]
 		stream = stream[dispSize:]
+		
+		disp = int.from_bytes(bytes(self.disp), byteorder = 'little', signed = True)
+		
+		# modify memory operand
+		if memory:
+			memOp = ''
+			if memType == 'b':
+				memOp = base['name']
+			elif memType == 's':
+				memOp = str(scale) + "*" + index['name']
+			elif memType == 'bs':
+				memOp = base['name'] + "+" + str(scale) + "*" + index['name']
+			elif memType == 'n':
+				memOp = '0'
+
+			memOp += '+' + str(disp)
+
+			memOp = operand("[" + memOp + "]")
+
+			if self.operator['ops'] == 1:
+				self.operands = [{}]
+				self.operands[0] = memOp
+			else:
+				self.operands += [{}]
+				self.operands[1] = memOp
+			
+				# proccess direction
+				if self.direction == 0b0:
+					tmp = self.operands[0]
+					self.operands[0] = self.operands[1]
+					self.operands[1] = tmp
 
 		# read possible data
 		if len(stream) < dataSize:
@@ -454,6 +540,22 @@ class Instruction:
 	def getRegRm(self):
 		code = self.rexB << 3 | self.rm
 		size = self.getRegSize()
+		reg = tableRegByCodeSize(code, size)
+		if reg == {}:
+			raise Exception("unknown register with code '" + code + "' and size " + size)
+		return reg
+
+	def getRegBase(self):
+		code = self.rexB << 3 | self.base
+		size = self.getRegSize(True)
+		reg = tableRegByCodeSize(code, size)
+		if reg == {}:
+			raise Exception("unknown register with code '" + code + "' and size " + size)
+		return reg
+
+	def getRegIndex(self):
+		code = self.rexX << 3 | self.index
+		size = self.getRegSize(True)
 		reg = tableRegByCodeSize(code, size)
 		if reg == {}:
 			raise Exception("unknown register with code '" + code + "' and size " + size)
