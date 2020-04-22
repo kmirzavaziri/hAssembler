@@ -49,7 +49,7 @@ def tableOpByCode(code):
 		if code == op['codea']:
 			return op
 	return {}
-def tableOpByCodIe(code):
+def tableOpByCodeI(code):
 	for op in operators:
 		if code == op['codei']:
 			return op

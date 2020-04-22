@@ -173,6 +173,10 @@ class Instruction:
 	#------------------------------ BINTOOBJ ------------------------------#
 	########################################################################
 	def fromBin(self, stream):
+		# we must handle the following cases
+		# [op reg] | [op reg, reg] | [op reg, imd]
+		# [op mem] | [op reg, mem] | [op mem, reg] | [op mem, imd]
+		# [op areg, imd]
 		dataSize = 0
 		dispSize = 0
 
@@ -265,7 +269,11 @@ class Instruction:
 						self.operands[1] = operand(self.getReg(self.reg)['name'])
 					# [op reg, imd]
 					elif opType == 'i':
-						opType = 'i' # TODO
+						dataSize = self.getRegSize()
+						# proccess direction (sign-extended here)
+						if self.direction == 0b1:
+							dataSize = 1
+
 			# [op mem] | [op reg, mem] | [op mem, reg] | [op mem, imd]
 			else:
 				memory = True
@@ -373,6 +381,13 @@ class Instruction:
 			raise Exception("data not found")
 		self.data = stream[0:dataSize]
 		stream = stream[dataSize:]
+
+		data = int.from_bytes(bytes(self.data), byteorder = 'little', signed = True)
+
+		# modify imd operand
+		if dataSize > 0:
+			self.operands += [{}]
+			self.operands[1] = operand(str(data))
 		
 		return stream
 
@@ -469,13 +484,14 @@ class Instruction:
 				# operation size
 				if self.operator['size'] != 0 and self.operator['size'] != self.operands[0]['data']['size']:
 					raise Exception("suffix and operand type mistmach for '" + head + "'")
-				size = min(self.operands[0]['data']['size'], bitsLen(self.operands[1]['data']))
+				size = min(self.operands[0]['data']['size'], 32)
 				# opCode
 				self.mainOpCode = self.operator['codei'] >> 3
 				self.reg = self.operator['codei'] & 0b111
 				# direction (sign-extended here)
 				if bitsLen(self.operands[1]['data']) == 8 and self.operands[0]['data']['size'] > 8:
 					self.direction = 0b1
+					size = 8
 				else:
 					self.direction = 0b0
 				# op 0
@@ -508,20 +524,21 @@ class Instruction:
 				if self.operator['size'] == 0:
 					raise Exception("ambiguous operand size for '" + head + "'")
 				else:
-					size = self.operator['size']
+					size = min(self.operator['size'], 32)
 				# opCode
 				self.mainOpCode = self.operator['codei'] >> 3
 				self.reg = self.operator['codei'] & 0b111
 				# direction (sign-extended here)
 				if bitsLen(self.operands[1]['data']) == 8 and size > 8:
 					self.direction = 0b1
+					size = 8
 				else:
 					self.direction = 0b0
 				# op 0
 				self.setMem(self.operands[0]['data'])
 				# op 1
-				self.setImdData(self.operands[1]['data'], min(bitsLen(self.operands[1]['data']), size))
-				self.setRegSize(size)
+				self.setImdData(self.operands[1]['data'], size)
+				self.setRegSize(self.operator['size'])
 			# --------------- imd, reg ---------------
 			# --------------- imd, mem ---------------
 			# --------------- imd, imd ---------------
@@ -665,7 +682,8 @@ class Instruction:
 			self.base = base['code']
 			if not fake:
 				self.setRegSize(base['size'], True)
-
+	def operatorSuffix(self):
+		return ''
 	########################################################################
 	#---------------------------- ASSEMBLY CODE ---------------------------#
 	########################################################################
@@ -698,7 +716,7 @@ class Instruction:
 					operands.append('[' + base['name'] + ' + ' + index['name'] + '*' + hex(scale) + dispStr + ']')
 			elif operand['type'] == 'imd':
 				operands.append(hex(operand['data']))
-		return self.operator['name'] + ' ' + ', '.join(operands)
+		return self.operator['name'] + self.operatorSuffix() + ' ' + ', '.join(operands)
 		
 	########################################################################
 	#---------------------------- MACHINE CODE ----------------------------#
