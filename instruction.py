@@ -243,6 +243,7 @@ class Instruction:
 			self.rm  = (addrMode >> 0) & 0b111
 
 			# figure out the operation (or already figured out)
+			
 			if self.operator['ops'] == 1 or self.operator['codei'] >> 3 == self.mainOpCode:
 				opType = 'i'
 				self.operator = tableOpByCodeI(self.mainOpCode << 3 | self.reg)
@@ -254,12 +255,14 @@ class Instruction:
 			if self.mod == 0b11:
 				# [op reg]
 				self.operands = [{}]
-				self.operands[0] = operand(self.getRegRm()['name'])
+				self.rm = self.rexB << 3 | self.rm
+				self.operands[0] = operand(self.getReg(self.rm)['name'])
 				if self.operator['ops'] > 1:
 					# [op reg, reg]
 					if opType == 'r':
 						self.operands += [{}]
-						self.operands[1] = operand(self.getRegReg()['name'])
+						self.reg = self.rexR << 3 | self.reg
+						self.operands[1] = operand(self.getReg(self.reg)['name'])
 					# [op reg, imd]
 					elif opType == 'i':
 						opType = 'i' # TODO
@@ -276,7 +279,8 @@ class Instruction:
 				# proccess reg
 				if self.operator['ops'] > 1:
 					self.operands = [{}]
-					self.operands[0] = operand(self.getRegReg()['name'])
+					self.reg = self.rexR << 3 | self.reg
+					self.operands[0] = operand(self.getReg(self.reg)['name'])
 
 				# proccess rm - case analysis
 				# cases: s, d, bs, sd, bsd
@@ -285,7 +289,8 @@ class Instruction:
 				# cases: b, bd
 				else:
 					self.base = self.rm
-					base = self.getRegBase()
+					self.base = self.rexB << 3 | self.base					
+					base = self.getReg(self.base, True)
 					memType = 'b'
 
 		# read possible SIB
@@ -299,20 +304,22 @@ class Instruction:
 			scale = 2**self.scale
 
 			self.index = (sib >> 3) & 0b111
-			index = self.getRegIndex()
+			self.index = self.rexX << 3 | self.index
+			index = self.getReg(self.index, True)
 			
 			self.base  = (sib >> 0) & 0b111
-			base = self.getRegBase()
+			self.base = self.rexB << 3 | self.base					
+			base = self.getReg(self.base, True)
 
 			# proccess base and index
-			# special case: esp as base
-			if self.scale == 0b00 and self.index == 0b100 and self.base == 0b100:
+			if self.scale == 0b00 and self.index == 0b100 & 0b111 and self.base & 0b111 == 0b100:
 				memType = 'b'
 			# case: d
-			elif self.scale == 0b00 and self.index == 0b100 and self.base == 0b101:
+			elif self.scale == 0b00 and self.index == 0b100 & 0b111 and self.base == 0b101 & 0b111:
 				memType = 'n'
+				dispSize = 4
 			# case: s, sd
-			elif self.mod == 0b00 and self.base == 0b101:
+			elif self.mod == 0b00 and self.base == 0b101 & 0b111:
 				memType = 's'
 				dispSize = 4
 			# case: bs, bsd
@@ -338,8 +345,13 @@ class Instruction:
 				memOp = base['name'] + "+" + str(scale) + "*" + index['name']
 			elif memType == 'n':
 				memOp = '0'
+			
+			if disp < 0:
+				disp = "0 - " + str(-disp)
+			else:
+				disp = str(disp)
 
-			memOp += '+' + str(disp)
+			memOp += '+' + disp
 
 			memOp = operand("[" + memOp + "]")
 
@@ -520,64 +532,22 @@ class Instruction:
 	########################################################################
 	#---------------------------- HELPER FUNCS ----------------------------#
 	########################################################################
-	def setRegReg(self, register):
-		self.reg = register['code']
-		self.setRegSize(register['size'])
-
-	def getRegReg(self):
-		code = self.rexR << 3 | self.reg
-		size = self.getRegSize()
+	def getReg(self, code, isAddress = False):
+		size = self.getRegSize(isAddress)
 		reg = tableRegByCodeSize(code, size)
 		if reg == {}:
 			raise Exception("unknown register with code '" + code + "' and size " + size)
 		return reg
+
+	def setRegReg(self, register):
+		self.reg = register['code']
+		self.setRegSize(register['size'])
 
 	def setRegRm(self, register):
 		self.mod = 0b11
 		self.rm = register['code']
 		self.setRegSize(register['size'])
-
-	def getRegRm(self):
-		code = self.rexB << 3 | self.rm
-		size = self.getRegSize()
-		reg = tableRegByCodeSize(code, size)
-		if reg == {}:
-			raise Exception("unknown register with code '" + code + "' and size " + size)
-		return reg
-
-	def getRegBase(self):
-		code = self.rexB << 3 | self.base
-		size = self.getRegSize(True)
-		reg = tableRegByCodeSize(code, size)
-		if reg == {}:
-			raise Exception("unknown register with code '" + code + "' and size " + size)
-		return reg
-
-	def getRegIndex(self):
-		code = self.rexX << 3 | self.index
-		size = self.getRegSize(True)
-		reg = tableRegByCodeSize(code, size)
-		if reg == {}:
-			raise Exception("unknown register with code '" + code + "' and size " + size)
-		return reg
 		
-	def setRegSize(self, size, isAddress = False):
-		if not isAddress:
-			if size == 8:
-				self.w = 0b0
-			elif size == 16:
-				self.w = 0b1
-				self.prefix = self.prefix + [0x66]
-			elif size == 32:
-				self.w = 0b1
-			elif size == 64:
-				self.rex = True
-				self.w = 0b1
-				self.rexW = 0b1
-		else:
-			if size == 32:
-				self.prefix = [0x67] + self.prefix
-
 	def getRegSize(self, isAddress = False):
 		if not isAddress:
 			if self.rexW == 0b0 and self.w == 0b0 and not 0x66 in self.prefix:
@@ -596,6 +566,23 @@ class Instruction:
 				return 32
 			else:
 				return 64
+
+	def setRegSize(self, size, isAddress = False):
+		if not isAddress:
+			if size == 8:
+				self.w = 0b0
+			elif size == 16:
+				self.w = 0b1
+				self.prefix = self.prefix + [0x66]
+			elif size == 32:
+				self.w = 0b1
+			elif size == 64:
+				self.rex = True
+				self.w = 0b1
+				self.rexW = 0b1
+		else:
+			if size == 32:
+				self.prefix = [0x67] + self.prefix
 
 	def setImdData(self, val, size):
 		self.data = [0x00] * (size // 8)
@@ -693,13 +680,16 @@ class Instruction:
 				index = operand['data']['index']
 				scale = operand['data']['scale']
 				disp = operand['data']['disp']
-				if disp == 0:
-					dispStr = ''
+				if disp < 0:
+					dispStr = ' + 0 - ' + hex(-disp)
+				elif disp == 0:
+					dispStr = ' + 0'
 				else:
 					dispStr = ' + ' + hex(disp)
 
+
 				if base == {} and index == {}:
-					operands.append('[' + hex(disp) + ']')
+					operands.append('[0' + dispStr + ']')
 				elif base == {} and index != {}:
 					operands.append('[' + index['name'] + '*' + hex(scale) + dispStr + ']')
 				elif base != {} and index == {}:
