@@ -44,11 +44,20 @@ def tableOpByCode(code):
 	for op in operators:
 		if code == op['coder']:
 			return op
-		if code == op['codei'] >> 3:
+		if code == op['coder'] >> 3:
 			return op
-		if code == op['codea']:
+		if 'codei' in op and code == op['codei'] >> 3:
+			return op
+		if 'codea' in op and code == op['codea']:
 			return op
 	return {}
+
+def tableOpByCodeR(code):
+	for op in operators:
+		if code == op['coder']:
+			return op
+	return {}
+
 def tableOpByCodeI(code):
 	for op in operators:
 		if code == op['codei']:
@@ -139,4 +148,5 @@ def tableRegByCodeSize(code, size):
 		if code == reg['code'] and size == reg['size']:
 			return reg
 	return {}
+
 

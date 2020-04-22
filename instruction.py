@@ -128,7 +128,7 @@ class Instruction:
 	########################################################################
 		self.operator = {}
 		self.operands = []
-
+		self.operatorSuffix = ''
 	########################################################################
 	#------------------------- Machine Code Data --------------------------#
 	########################################################################
@@ -174,9 +174,9 @@ class Instruction:
 	########################################################################
 	def fromBin(self, stream):
 		# we must handle the following cases
+		# [op areg, imd]
 		# [op reg] | [op reg, reg] | [op reg, imd]
 		# [op mem] | [op reg, mem] | [op mem, reg] | [op mem, imd]
-		# [op areg, imd]
 		dataSize = 0
 		dispSize = 0
 
@@ -220,20 +220,23 @@ class Instruction:
 		self.direction = (opCode >> 1) & 0b1
 		self.w = (opCode >> 0) & 0b1
 
+		# proccess opCode - may figure out the operation
 		self.operator = tableOpByCode(self.mainOpCode)
 		if self.operator == {}:
-			raise Exception("unknow OpCode")
+			raise Exception("unknow OpCode '" + str(self.mainOpCode) + "'")
 
-		# proccess opCode - may figure out the operation
 		opType = 'r'
 		# [op areg, imd]
-		if self.operator['codea'] == self.mainOpCode:
+		if 'codea' in self.operator and self.operator['codea'] == self.mainOpCode:
 			opType = 'a'
 			self.addrMode = False
 			size = self.getRegSize()
 			self.operands = [{}]
 			self.operands[0] = operand(tableRegByCodeSize(0b0000, size)['name'])
-			dataSize = 1 # TODO
+			dataSize = min(size, 32) // 8
+			# proccess direction (sign-extended here)
+			if self.direction == 0b1:
+				dataSize = 1
 
 		# read possible AddrMode
 		if self.addrMode:
@@ -248,11 +251,24 @@ class Instruction:
 
 			# figure out the operation (or already figured out)
 			
-			if self.operator['ops'] == 1 or self.operator['codei'] >> 3 == self.mainOpCode:
+			# [op reg] | [op mem]
+			if self.operator['ops'] == 1:
+				opType = 'r'
+				self.operator = tableOpByCodeR(self.mainOpCode << 3 | self.reg)
+				if self.operator == {}:
+					raise Exception("unknow OpCode")
+
+			# [op reg, imd] | [op mem, imd]
+			elif self.operator['codei'] >> 3 == self.mainOpCode:
 				opType = 'i'
 				self.operator = tableOpByCodeI(self.mainOpCode << 3 | self.reg)
 				if self.operator == {}:
 					raise Exception("unknow OpCode")
+				dataSize = min(self.getRegSize(), 32) // 8
+				# proccess direction (sign-extended here)
+				if self.direction == 0b1:
+					dataSize = 1
+
 			
 			# proccess mod - case analysis
 			# [op reg] | [op reg, reg] | [op reg, imd]
@@ -267,12 +283,6 @@ class Instruction:
 						self.operands += [{}]
 						self.reg = self.rexR << 3 | self.reg
 						self.operands[1] = operand(self.getReg(self.reg)['name'])
-					# [op reg, imd]
-					elif opType == 'i':
-						dataSize = self.getRegSize()
-						# proccess direction (sign-extended here)
-						if self.direction == 0b1:
-							dataSize = 1
 
 			# [op mem] | [op reg, mem] | [op mem, reg] | [op mem, imd]
 			else:
@@ -363,7 +373,7 @@ class Instruction:
 
 			memOp = operand("[" + memOp + "]")
 
-			if self.operator['ops'] == 1:
+			if self.operator['ops'] == 1 or opType == 'i':
 				self.operands = [{}]
 				self.operands[0] = memOp
 			else:
@@ -382,13 +392,31 @@ class Instruction:
 		self.data = stream[0:dataSize]
 		stream = stream[dataSize:]
 
-		data = int.from_bytes(bytes(self.data), byteorder = 'little', signed = True)
-
 		# modify imd operand
 		if dataSize > 0:
+			data = int.from_bytes(bytes(self.data), byteorder = 'little', signed = True)
+			if data < 0:
+				dataStr = '0 - ' + hex(-data)
+			elif data == 0:
+				dataStr = '0'
+			else:
+				dataStr = hex(data)
 			self.operands += [{}]
-			self.operands[1] = operand(str(data))
+			self.operands[1] = operand(dataStr)
 		
+		# add possible suffix
+
+		if self.operands[0]['type'] == 'mem' and (len(self.operands) < 2 or self.operands[1]['type'] != 'reg'):
+			size = self.getRegSize()
+			if size == 8:
+				self.operatorSuffix = 'b'
+			elif size == 16:
+				self.operatorSuffix = 'w'
+			elif size == 32:
+				self.operatorSuffix = 'd'
+			elif size == 64:
+				self.operatorSuffix = 'q'
+
 		return stream
 
 
@@ -682,8 +710,7 @@ class Instruction:
 			self.base = base['code']
 			if not fake:
 				self.setRegSize(base['size'], True)
-	def operatorSuffix(self):
-		return ''
+
 	########################################################################
 	#---------------------------- ASSEMBLY CODE ---------------------------#
 	########################################################################
@@ -715,8 +742,15 @@ class Instruction:
 				elif base != {} and index != {}:
 					operands.append('[' + base['name'] + ' + ' + index['name'] + '*' + hex(scale) + dispStr + ']')
 			elif operand['type'] == 'imd':
-				operands.append(hex(operand['data']))
-		return self.operator['name'] + self.operatorSuffix() + ' ' + ', '.join(operands)
+				data = operand['data']
+				if data < 0:
+					dataStr = '0 - ' + hex(-data)
+				elif data == 0:
+					dataStr = '0'
+				else:
+					dataStr = hex(data)
+				operands.append(dataStr)
+		return self.operator['name'] + self.operatorSuffix + ' ' + ', '.join(operands)
 		
 	########################################################################
 	#---------------------------- MACHINE CODE ----------------------------#
